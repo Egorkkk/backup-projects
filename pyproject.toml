@@ -11,6 +11,7 @@ license = { file = "LICENSE" }
 dependencies = [
   "Flask>=3.0,<4.0",
   "Jinja2>=3.1,<4.0",
+  "SQLAlchemy>=2.0,<3.0",
   "Typer>=0.12,<1.0",
   "pydantic>=2.7,<3.0",
   "PyYAML>=6.0,<7.0",
@@ -22,6 +23,12 @@ dev = [
   "ruff>=0.4,<1.0",
   "black>=24.0,<26.0",
 ]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.ruff]
 target-version = "py312"
@@ -38,3 +45,4 @@ line-length = 100
 minversion = "8.0"
 addopts = "-q"
 testpaths = ["tests"]
+pythonpath = ["src"]

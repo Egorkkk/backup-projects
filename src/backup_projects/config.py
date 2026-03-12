@@ -6,6 +6,13 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
+from backup_projects.constants import (
+    AAF_EXTENSION,
+    OversizeAction,
+    SchedulerMode,
+    UnknownExtensionAction,
+)
+
 
 class ConfigError(Exception):
     """Base exception for config loading errors."""
@@ -73,7 +80,7 @@ class ResticSettings(StrictConfigModel):
 
 
 class SchedulerSettings(StrictConfigModel):
-    mode: Literal["cron"]
+    mode: SchedulerMode
 
 
 class AppFileConfig(StrictConfigModel):
@@ -100,8 +107,8 @@ class SizeLimits(StrictConfigModel):
     @field_validator("by_extension")
     @classmethod
     def validate_by_extension(cls, value: dict[str, int]) -> dict[str, int]:
-        if "aaf" not in value:
-            raise ValueError("size_limits.by_extension must define 'aaf'")
+        if AAF_EXTENSION not in value:
+            raise ValueError(f"size_limits.by_extension must define '{AAF_EXTENSION}'")
         for extension, limit in value.items():
             if not extension:
                 raise ValueError("extension key must be non-empty")
@@ -117,13 +124,13 @@ class ExcludePatterns(StrictConfigModel):
 
 
 class OversizePolicy(StrictConfigModel):
-    default_action: Literal["skip", "warn", "include"]
-    aaf_action: Literal["skip", "warn", "include"]
+    default_action: OversizeAction
+    aaf_action: OversizeAction
     log_skipped: bool
 
 
 class UnknownExtensionsPolicy(StrictConfigModel):
-    action: Literal["collect_and_skip", "skip_silent"]
+    action: UnknownExtensionAction
     store_in_registry: bool
     log_warning: bool
 
