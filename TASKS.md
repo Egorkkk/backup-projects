@@ -16,99 +16,99 @@
 # 0. Подготовка репозитория
 
 ## 0.1. Базовый каркас
-- [ ] Создать git-репозиторий
-- [ ] Создать ветку `main`
-- [ ] Создать базовую структуру папок проекта
-- [ ] Добавить `README.md`
-- [ ] Добавить `ARCHITECTURE.md`
-- [ ] Добавить `TASKS.md`
-- [ ] Добавить `ROADMAP.md`
-- [ ] Добавить `docs/tdz_v1.md`
-- [ ] Добавить `.gitignore`
+- [x] Создать git-репозиторий
+- [x] Создать ветку `main`
+- [x] Создать базовую структуру папок проекта
+- [x] Добавить `README.md`
+- [x] Добавить `ARCHITECTURE.md`
+- [x] Добавить `TASKS.md`
+- [x] Добавить `ROADMAP.md`
+- [x] Добавить `docs/tdz_v1.md`
+- [x] Добавить `.gitignore`
 
 ## 0.2. Python-проект
-- [ ] Создать `pyproject.toml`
-- [ ] Зафиксировать Python version: 3.12+
-- [ ] Добавить зависимости:
-  - [ ] Flask
-  - [ ] Jinja2
-  - [ ] Typer
-  - [ ] SQLAlchemy или выбранный DB слой
-  - [ ] pydantic
-  - [ ] pytest
-  - [ ] ruff
-  - [ ] black
-- [ ] Добавить `requirements.txt` или lock-файл
-- [ ] Добавить `Makefile` с базовыми командами
+- [x] Создать `pyproject.toml`
+- [x] Зафиксировать Python version: 3.12+
+- [x] Добавить зависимости:
+  - [x] Flask
+  - [x] Jinja2
+  - [x] Typer
+  - [x] SQLAlchemy или выбранный DB слой
+  - [x] pydantic
+  - [x] pytest
+  - [x] ruff
+  - [x] black
+- [x] Добавить `requirements.txt` или lock-файл
+- [x] Добавить `Makefile` с базовыми командами
 
 ## 0.3. Developer tooling
-- [ ] Настроить `ruff`
+- [x] Настроить `ruff`
 - [ ] Настроить `black`
-- [ ] Настроить `pytest`
-- [ ] Добавить базовую команду `make test`
-- [ ] Добавить базовую команду `make lint`
-- [ ] Добавить базовую команду `make format`
+- [x] Настроить `pytest`
+- [x] Добавить базовую команду `make test`
+- [x] Добавить базовую команду `make lint`
+- [x] Добавить базовую команду `make format`
 
 ## 0.4. Runtime layout
-- [ ] Создать папки `runtime/logs`
-- [ ] Создать папки `runtime/manifests`
-- [ ] Создать папки `runtime/reports`
-- [ ] Создать папки `runtime/db`
-- [ ] Создать папки `runtime/locks`
+- [x] Создать папки `runtime/logs`
+- [x] Создать папки `runtime/manifests`
+- [x] Создать папки `runtime/reports`
+- [x] Создать папки `runtime/db`
+- [x] Создать папки `runtime/locks`
 
 ---
 
 # 1. Конфигурация
 
 ## 1.1. Конфиг-файлы
-- [ ] Создать `config/app.example.yaml`
-- [ ] Создать `config/rules.example.yaml`
+- [x] Создать `config/app.example.yaml`
+- [x] Создать `config/rules.example.yaml`
 
 ## 1.2. Загрузка конфигурации
-- [ ] Реализовать `config.py`
-- [ ] Описать структуру app settings
-- [ ] Описать структуру raid roots
-- [ ] Описать runtime paths
-- [ ] Описать web settings
-- [ ] Описать DB settings
-- [ ] Описать restic settings
-- [ ] Описать scheduler mode (`cron`)
-- [ ] Реализовать валидацию конфигурации
+- [x] Реализовать `config.py`
+- [x] Описать структуру app settings
+- [x] Описать структуру raid roots
+- [x] Описать runtime paths
+- [x] Описать web settings
+- [x] Описать DB settings
+- [x] Описать restic settings
+- [x] Описать scheduler mode (`cron`)
+- [x] Реализовать валидацию конфигурации
 
 ## 1.3. Константы
-- [ ] Создать `constants.py`
-- [ ] Зафиксировать default `.aaf` limit = 100MB
-- [ ] Зафиксировать default allowed extensions
-- [ ] Зафиксировать default exclude patterns
+- [x] Создать `constants.py`
+- [x] Зафиксировать default `.aaf` limit = 100MB
+- [x] Зафиксировать default allowed extensions
+- [x] Зафиксировать default exclude patterns
 
 ---
 
 # 2. База данных
 
 ## 2.1. DB skeleton
-- [ ] Выбрать окончательно DB слой
-- [ ] Реализовать `adapters/db/session.py`
-- [ ] Реализовать `adapters/db/schema.py`
-- [ ] Реализовать `adapters/db/sqlite_utils.py`
+- [x] Выбрать окончательно DB слой
+- [x] Реализовать `adapters/db/session.py`
+- [x] Реализовать `adapters/db/schema.py`
+- [x] Реализовать `adapters/db/sqlite_utils.py`
 
 ## 2.2. Таблицы
-- [ ] Создать таблицу `roots`
-- [ ] Создать таблицу `project_dirs`
-- [ ] Создать таблицу `project_files`
-- [ ] Создать таблицу `manual_includes`
-- [ ] Создать таблицу `extension_rules`
-- [ ] Создать таблицу `excluded_patterns`
-- [ ] Создать таблицу `settings`
-- [ ] Создать таблицу `runs`
-- [ ] Создать таблицу `run_events`
-- [ ] Создать таблицу `unrecognized_extensions`
+- [x] Создать таблицу `roots`
+- [x] Создать таблицу `project_dirs`
+- [x] Создать таблицу `project_files`
+- [x] Создать таблицу `manual_includes`
+- [x] Создать таблицу `extension_rules`
+- [x] Создать таблицу `excluded_patterns`
+- [x] Создать таблицу `settings`
+- [x] Создать таблицу `runs`
+- [x] Создать таблицу `run_events`
+- [x] Создать таблицу `unrecognized_extensions`
 
 ## 2.3. Инициализация БД
-- [ ] Реализовать `init-db`
-- [ ] Реализовать seed default settings
-- [ ] Реализовать seed extension rules
-- [ ] Реализовать seed exclude rules
-- [ ] Реализовать проверку повторного init
+- [x] Реализовать `init-db`
+- [x] Реализовать seed default settings
+- [x] Реализовать seed extension rules
+- [x] Реализовать seed exclude rules
+- [x] Реализовать проверку повторного init
 
 ## 2.4. Репозитории
 - [ ] Реализовать `roots_repo.py`

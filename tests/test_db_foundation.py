@@ -1,7 +1,7 @@
 from pathlib import Path
 from textwrap import dedent
 
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 
 from backup_projects.adapters.db.schema import create_schema
 from backup_projects.adapters.db.session import (
@@ -25,6 +25,51 @@ def test_create_schema_creates_sqlite_file(tmp_path: Path) -> None:
     create_schema(engine)
 
     assert db_path.exists()
+
+
+def test_create_schema_creates_core_tables_and_constraints(tmp_path: Path) -> None:
+    db_path = tmp_path / "runtime" / "db" / "schema.sqlite3"
+    engine = create_sqlite_engine(db_path)
+
+    create_schema(engine)
+
+    inspector = inspect(engine)
+
+    assert set(inspector.get_table_names()) == {
+        "excluded_patterns",
+        "extension_rules",
+        "manual_includes",
+        "project_dirs",
+        "project_files",
+        "roots",
+        "run_events",
+        "runs",
+        "settings",
+        "unrecognized_extensions",
+    }
+
+    project_dirs_foreign_keys = inspector.get_foreign_keys("project_dirs")
+    project_files_uniques = inspector.get_unique_constraints("project_files")
+    run_events_indexes = inspector.get_indexes("run_events")
+
+    assert project_dirs_foreign_keys == [
+        {
+            "name": None,
+            "constrained_columns": ["root_id"],
+            "referred_schema": None,
+            "referred_table": "roots",
+            "referred_columns": ["id"],
+            "options": {"ondelete": "CASCADE"},
+        }
+    ]
+    assert {unique["name"] for unique in project_files_uniques} == {
+        "uq_project_files_project_dir_relative_path"
+    }
+    assert {index["name"] for index in run_events_indexes} >= {
+        "ix_run_events_event_type",
+        "ix_run_events_level",
+        "ix_run_events_run_id_event_time",
+    }
 
 
 def test_sqlite_pragmas_are_applied(tmp_path: Path) -> None:
