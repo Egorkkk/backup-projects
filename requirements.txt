@@ -1,5 +1,6 @@
 Flask>=3.0,<4.0
 Jinja2>=3.1,<4.0
+SQLAlchemy>=2.0,<3.0
 Typer>=0.12,<1.0
 pydantic>=2.7,<3.0
 PyYAML>=6.0,<7.0
