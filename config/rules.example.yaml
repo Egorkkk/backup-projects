@@ -1,0 +1,47 @@
+# Baseline allowlist of project/exchange file extensions.
+# Extensions are stored without leading dots.
+allowed_extensions:
+  - "prproj"
+  - "avb"
+  - "avp"
+  - "aep"
+  - "aepx"
+  - "drp"
+  - "drt"
+  - "edl"
+  - "xml"
+  - "fcpxml"
+  - "aaf"
+
+# Size limits in bytes.
+size_limits:
+  # null means no global limit by default.
+  default_max_size_bytes: null
+  by_extension:
+    # Required baseline: .aaf limit = 100MB.
+    aaf: 104857600
+
+# Baseline behavior when file size exceeds configured limit.
+oversize:
+  # Allowed values expected by future config.py: skip | warn | include
+  default_action: "warn"
+  aaf_action: "skip"
+  log_skipped: true
+
+# Baseline exclusion rules.
+exclude_patterns:
+  directory_names:
+    - "Cache"
+    - "Render Cache"
+    - "Media Cache"
+    - "Preview Files"
+  glob_patterns:
+    - "**/.cache/**"
+  path_substrings: []
+
+# Handling policy for unknown/unrecognized extensions.
+unknown_extensions:
+  # collect_and_skip means: do not include in manifest, but store for reports/review.
+  action: "collect_and_skip"
+  store_in_registry: true
+  log_warning: true

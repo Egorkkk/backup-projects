@@ -1,0 +1,45 @@
+# Baseline application settings for local development.
+app:
+  name: "backup-projects"
+  env: "local"
+  log_level: "INFO"
+
+# First-level RAID roots that should be scanned by inventory jobs.
+raid_roots:
+  - name: "raid_a"
+    path: "/mnt/raid_a/projects"
+    enabled: true
+  - name: "raid_b"
+    path: "/mnt/raid_b/projects"
+    enabled: true
+
+# Runtime directories used by jobs/services.
+runtime:
+  logs_dir: "runtime/logs"
+  manifests_dir: "runtime/manifests"
+  reports_dir: "runtime/reports"
+  db_dir: "runtime/db"
+  locks_dir: "runtime/locks"
+
+# Minimal web baseline for operator UI.
+web:
+  host: "127.0.0.1"
+  port: 8080
+  debug: false
+
+# DB contract for Foundation: SQLite only at this stage.
+db:
+  driver: "sqlite"
+  sqlite_path: "runtime/db/backup_projects.sqlite3"
+
+# Restic baseline config.
+# Keep secrets out of YAML; pass password via environment variable.
+restic:
+  binary: "restic"
+  repository: "/mnt/backup/restic-repo"
+  password_env_var: "RESTIC_PASSWORD"
+  timeout_seconds: 7200
+
+# Scheduler mode is cron-first for v1.
+scheduler:
+  mode: "cron"

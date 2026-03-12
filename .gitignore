@@ -205,3 +205,15 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Runtime layout: keep directory structure, ignore runtime artifacts
+runtime/logs/**
+!runtime/logs/.gitkeep
+runtime/manifests/**
+!runtime/manifests/.gitkeep
+runtime/reports/**
+!runtime/reports/.gitkeep
+runtime/db/**
+!runtime/db/.gitkeep
+runtime/locks/**
+!runtime/locks/.gitkeep
