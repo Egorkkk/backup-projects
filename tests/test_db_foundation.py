@@ -111,7 +111,8 @@ def test_create_engine_from_loaded_config(tmp_path: Path) -> None:
     app_path = tmp_path / "app.yaml"
 
     app_path.write_text(
-        dedent(f"""
+        dedent(
+            f"""
             app:
               name: "backup-projects"
               env: "local"
@@ -140,7 +141,9 @@ def test_create_engine_from_loaded_config(tmp_path: Path) -> None:
               timeout_seconds: 7200
             scheduler:
               mode: "cron"
-            """).strip() + "\n",
+            """
+        ).strip()
+        + "\n",
         encoding="utf-8",
     )
 

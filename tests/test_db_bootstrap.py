@@ -68,6 +68,20 @@ def test_initialize_database_is_rerunnable_and_preserves_existing_values(
                 text("UPDATE settings SET value_json = :value_json WHERE key = 'scheduler.mode'"),
                 {"value_json": json.dumps("manual")},
             )
+            connection.execute(
+                text(
+                    "UPDATE extension_rules "
+                    "SET enabled = 0, max_size_bytes = 209715200, oversize_action = 'warn' "
+                    "WHERE extension = 'aaf'"
+                )
+            )
+            connection.execute(
+                text(
+                    "UPDATE excluded_patterns "
+                    "SET enabled = 0 "
+                    "WHERE pattern_type = 'directory_name' AND pattern_value = 'Cache'"
+                )
+            )
 
         initialize_database(config)
 
@@ -82,6 +96,18 @@ def test_initialize_database_is_rerunnable_and_preserves_existing_values(
             scheduler_mode = connection.execute(
                 text("SELECT value_json FROM settings WHERE key = 'scheduler.mode'")
             ).scalar_one()
+            aaf_rule = connection.execute(
+                text(
+                    "SELECT enabled, max_size_bytes, oversize_action "
+                    "FROM extension_rules WHERE extension = 'aaf'"
+                )
+            ).one()
+            cache_pattern_enabled = connection.execute(
+                text(
+                    "SELECT enabled FROM excluded_patterns "
+                    "WHERE pattern_type = 'directory_name' AND pattern_value = 'Cache'"
+                )
+            ).scalar_one()
     finally:
         engine.dispose()
 
@@ -89,6 +115,8 @@ def test_initialize_database_is_rerunnable_and_preserves_existing_values(
     assert extension_rules_count == 2
     assert excluded_patterns_count == 3
     assert json.loads(scheduler_mode) == "manual"
+    assert aaf_rule == (0, 209715200, "warn")
+    assert cache_pattern_enabled == 0
 
 
 def _load_test_config(tmp_path: Path):
@@ -96,7 +124,8 @@ def _load_test_config(tmp_path: Path):
     rules_path = tmp_path / "rules.yaml"
 
     app_path.write_text(
-        dedent("""
+        dedent(
+            """
             app:
               name: "backup-projects"
               env: "test"
@@ -125,11 +154,14 @@ def _load_test_config(tmp_path: Path):
               timeout_seconds: 7200
             scheduler:
               mode: "cron"
-            """).strip() + "\n",
+            """
+        ).strip()
+        + "\n",
         encoding="utf-8",
     )
     rules_path.write_text(
-        dedent("""
+        dedent(
+            """
             allowed_extensions:
               - "prproj"
               - "aaf"
@@ -152,7 +184,9 @@ def _load_test_config(tmp_path: Path):
               action: "collect_and_skip"
               store_in_registry: true
               log_warning: true
-            """).strip() + "\n",
+            """
+        ).strip()
+        + "\n",
         encoding="utf-8",
     )
 

@@ -58,17 +58,21 @@ class RunsRepository:
         return record
 
     def get_run(self, run_id: int) -> RunRecord | None:
-        row = self._session.execute(
-            select(runs).where(runs.c.id == run_id)
-        ).mappings().one_or_none()
+        row = (
+            self._session.execute(select(runs).where(runs.c.id == run_id)).mappings().one_or_none()
+        )
         if row is None:
             return None
         return _to_run_record(row)
 
     def list_runs(self, *, limit: int = 100) -> list[RunRecord]:
-        rows = self._session.execute(
-            select(runs).order_by(runs.c.started_at.desc(), runs.c.id.desc()).limit(limit)
-        ).mappings().all()
+        rows = (
+            self._session.execute(
+                select(runs).order_by(runs.c.started_at.desc(), runs.c.id.desc()).limit(limit)
+            )
+            .mappings()
+            .all()
+        )
         return [_to_run_record(row) for row in rows]
 
     def update_run_status(
@@ -79,9 +83,7 @@ class RunsRepository:
         finished_at: str | None = None,
     ) -> None:
         self._session.execute(
-            update(runs)
-            .where(runs.c.id == run_id)
-            .values(status=status, finished_at=finished_at)
+            update(runs).where(runs.c.id == run_id).values(status=status, finished_at=finished_at)
         )
 
     def add_run_event(
@@ -105,17 +107,23 @@ class RunsRepository:
             )
         )
         event_id = int(result.inserted_primary_key[0])
-        row = self._session.execute(
-            select(run_events).where(run_events.c.id == event_id)
-        ).mappings().one()
+        row = (
+            self._session.execute(select(run_events).where(run_events.c.id == event_id))
+            .mappings()
+            .one()
+        )
         return _to_run_event_record(row)
 
     def list_run_events(self, run_id: int) -> list[RunEventRecord]:
-        rows = self._session.execute(
-            select(run_events)
-            .where(run_events.c.run_id == run_id)
-            .order_by(run_events.c.event_time, run_events.c.id)
-        ).mappings().all()
+        rows = (
+            self._session.execute(
+                select(run_events)
+                .where(run_events.c.run_id == run_id)
+                .order_by(run_events.c.event_time, run_events.c.id)
+            )
+            .mappings()
+            .all()
+        )
         return [_to_run_event_record(row) for row in rows]
 
 

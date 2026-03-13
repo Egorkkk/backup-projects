@@ -111,85 +111,85 @@
 - [x] Реализовать проверку повторного init
 
 ## 2.4. Репозитории
-- [ ] Реализовать `roots_repo.py`
-- [ ] Реализовать `project_dirs_repo.py`
-- [ ] Реализовать `project_files_repo.py`
-- [ ] Реализовать `manual_includes_repo.py`
-- [ ] Реализовать `rules_repo.py`
-- [ ] Реализовать `runs_repo.py`
-- [ ] Реализовать `settings_repo.py`
+- [x] Реализовать `roots_repo.py`
+- [x] Реализовать `project_dirs_repo.py`
+- [x] Реализовать `project_files_repo.py`
+- [x] Реализовать `manual_includes_repo.py`
+- [x] Реализовать `rules_repo.py`
+- [x] Реализовать `runs_repo.py`
+- [x] Реализовать `settings_repo.py`
 
 ## 2.5. Тесты БД
-- [ ] Написать integration tests для schema init
-- [ ] Написать integration tests для repositories CRUD
-- [ ] Написать test fixtures для sqlite
+- [x] Написать integration tests для schema init
+- [x] Написать integration tests для repositories CRUD
+- [x] Написать test fixtures для sqlite
 
 ---
 
 # 3. Domain layer
 
 ## 3.1. Enums
-- [ ] Описать enums для статусов roots
-- [ ] Описать enums для статусов project_dirs
-- [ ] Описать enums для статусов project_files
-- [ ] Описать enums для job types
-- [ ] Описать enums для oversize actions
-- [ ] Описать enums для include path type
+- [x] Описать enums для статусов roots
+- [x] Описать enums для статусов project_dirs
+- [x] Описать enums для статусов project_files
+- [x] Описать enums для job types
+- [x] Описать enums для oversize actions
+- [x] Описать enums для include path type
 
 ## 3.2. DTO / models
-- [ ] Описать DTO для RootRecord
-- [ ] Описать DTO для ProjectDirRecord
-- [ ] Описать DTO для ProjectFileRecord
-- [ ] Описать DTO для ManualInclude
-- [ ] Описать DTO для ExtensionRule
-- [ ] Описать DTO для ExcludedPattern
-- [ ] Описать DTO для RunSummary
-- [ ] Описать DTO для CandidateFile
-- [ ] Описать DTO для FinalDecision
-- [ ] Описать DTO для ManifestResult
+- [x] Описать DTO для RootRecord
+- [x] Описать DTO для ProjectDirRecord
+- [x] Описать DTO для ProjectFileRecord
+- [x] Описать DTO для ManualInclude
+- [x] Описать DTO для ExtensionRule
+- [x] Описать DTO для ExcludedPattern
+- [x] Описать DTO для RunSummary
+- [x] Описать DTO для CandidateFile
+- [x] Описать DTO для FinalDecision
+- [x] Описать DTO для ManifestResult
 
 ---
 
 # 4. Адаптеры файловой системы
 
 ## 4.1. Listing/stat
-- [ ] Реализовать `dir_listing.py`
-- [ ] Реализовать `stat_reader.py`
-- [ ] Реализовать `path_utils.py`
+- [x] Реализовать `dir_listing.py`
+- [x] Реализовать `stat_reader.py`
+- [x] Реализовать `path_utils.py`
 
 ## 4.2. Finder
-- [ ] Реализовать `file_finder.py`
-- [ ] Поддержать поиск по расширениям
-- [ ] Поддержать исключение path patterns
-- [ ] Поддержать ограничение на stay-on-fs
-- [ ] Поддержать ignore symlinks
-- [ ] Поддержать режим поиска только в одной root
-- [ ] Поддержать режим поиска только в одной project_dir
+- [x] Реализовать `file_finder.py`
+- [x] Поддержать поиск по расширениям
+- [x] Поддержать исключение path patterns
+- [x] Поддержать ограничение на stay-on-fs
+- [x] Поддержать ignore symlinks
+- [x] Поддержать режим поиска только в одной root
+- [x] Поддержать режим поиска только в одной project_dir
 
 ## 4.3. Командный runner
-- [ ] Реализовать `command_runner.py`
-- [ ] Реализовать общий subprocess wrapper
-- [ ] Логировать exit code/stdout/stderr
-- [ ] Добавить timeout support
+- [x] Реализовать `command_runner.py`
+- [x] Реализовать общий subprocess wrapper
+- [x] Логировать exit code/stdout/stderr
+- [x] Добавить timeout support
 
 ---
 
 # 5. Inventory: roots discovery
 
 ## 5.1. Root discovery service
-- [ ] Реализовать `root_discovery_service.py`
-- [ ] Реализовать `list_root_directories(raid_path)`
-- [ ] Реализовать фильтрацию только first-level dirs
-- [ ] Реализовать сравнение с DB
-- [ ] Реализовать создание новых roots
-- [ ] Реализовать пометку missing roots
-- [ ] Реализовать обновление last_seen
+- [x] Реализовать `root_discovery_service.py`
+- [x] Реализовать `list_root_directories(raid_path)`
+- [x] Реализовать фильтрацию только first-level dirs
+- [x] Реализовать сравнение с DB
+- [x] Реализовать создание новых roots
+- [x] Реализовать пометку missing roots
+- [x] Реализовать обновление last_seen
 
 ## 5.2. Root change detection
-- [ ] Реализовать сравнение inode
-- [ ] Реализовать сравнение mtime
-- [ ] Реализовать сравнение ctime
-- [ ] Реализовать флаг `needs_structural_rescan`
+- [x] Реализовать сравнение inode
+- [x] Реализовать сравнение mtime
+- [x] Реализовать сравнение ctime
+- [x] Реализовать флаг `needs_structural_rescan`
 
 ## 5.3. CLI
 - [ ] Добавить CLI команду `scan-roots`

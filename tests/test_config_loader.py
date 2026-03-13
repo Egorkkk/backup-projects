@@ -86,7 +86,8 @@ restic:
   timeout_seconds: 7200
 scheduler:
   mode: "cron"
-""".strip() + "\n",
+""".strip()
+        + "\n",
         encoding="utf-8",
     )
 
@@ -116,7 +117,8 @@ unknown_extensions:
   action: "collect_and_skip"
   store_in_registry: true
   log_warning: true
-""".strip() + "\n",
+""".strip()
+        + "\n",
         encoding="utf-8",
     )
 

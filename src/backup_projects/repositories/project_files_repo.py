@@ -65,9 +65,7 @@ class ProjectFilesRepository:
         return record
 
     def get_by_id(self, project_file_id: int) -> ProjectFileRecord | None:
-        return self._fetch_one(
-            select(project_files).where(project_files.c.id == project_file_id)
-        )
+        return self._fetch_one(select(project_files).where(project_files.c.id == project_file_id))
 
     def get_by_dir_and_path(
         self, *, project_dir_id: int, relative_path: str
