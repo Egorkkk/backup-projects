@@ -10,6 +10,7 @@ from backup_projects.adapters.db.session import (
     session_scope,
 )
 from backup_projects.domain.enums import RootStatus
+from backup_projects.domain.models import RootRecord
 from backup_projects.repositories.roots_repo import RootsRepository
 from backup_projects.services import root_discovery_service as root_discovery_module
 from backup_projects.services.root_discovery_service import (
@@ -96,6 +97,9 @@ def test_discover_and_sync_roots_creates_new_roots_and_marks_missing(
     ]
     assert result.reactivated == ()
     assert result.unchanged_present == ()
+    assert all(isinstance(record, RootRecord) for record in result.created)
+    assert all(isinstance(record, RootRecord) for record in result.discovered)
+    assert all(isinstance(record, RootRecord) for record in result.marked_missing)
 
     all_roots = repo.list_all()
     assert [record.path for record in all_roots] == [

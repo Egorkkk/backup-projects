@@ -1,0 +1,16 @@
+# Sanitized root-discovery sample tree.
+d MOVIE
+d MOVIE/Feature Alpha
+f MOVIE/Feature Alpha/scene 01.mov
+d TV SHOW
+d TV SHOW/Season 01
+f TV SHOW/Season 01/episode 01.mp4
+d TV SHOW_SUB
+d TV SHOW_SUB/Season 01/Subtitles
+f TV SHOW_SUB/Season 01/Subtitles/episode 01.srt
+d SHORTS
+f SHORTS/short note.txt
+d СЕРИАЛЫ
+d СЕРИАЛЫ/Сезон 01
+f СЕРИАЛЫ/Сезон 01/серия 01.mxf
+f README.txt

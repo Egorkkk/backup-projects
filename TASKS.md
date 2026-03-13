@@ -192,11 +192,11 @@
 - [x] Реализовать флаг `needs_structural_rescan`
 
 ## 5.3. CLI
-- [ ] Добавить CLI команду `scan-roots`
+- [x] Добавить CLI команду `scan-roots`
 
 ## 5.4. Тесты
-- [ ] Unit tests для root discovery
-- [ ] Integration test для root sync на sample tree
+- [x] Unit tests для root discovery
+- [x] Integration test для root sync на sample tree
 
 ---
 
