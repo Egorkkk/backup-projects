@@ -203,11 +203,11 @@
 # 6. Inventory: structural scan
 
 ## 6.1. Structural scan service
-- [ ] Реализовать `structural_scan_service.py`
-- [ ] Реализовать scan одной root-папки
-- [ ] Находить project_dirs по allowed extensions
-- [ ] Находить project_files внутри найденных project_dirs
-- [ ] Определять `dir_type` (premiere/avid/aftereffects/resolve/mixed/unknown)
+- [x] Реализовать `structural_scan_service.py`
+- [x] Реализовать scan одной root-папки
+- [x] Находить project_dirs по allowed extensions
+- [x] Находить project_files внутри найденных project_dirs
+- [x] Определять `dir_type` (premiere/avid/aftereffects/resolve/mixed/unknown)
 
 ## 6.2. Sync with DB
 - [ ] Реализовать регистрацию новых project_dirs
