@@ -1,0 +1,17 @@
+# Sanitized structural-scan sample tree.
+d Mixed Suite
+f Mixed Suite/edit.prproj
+d Mixed Suite/Nested AE
+f Mixed Suite/Nested AE/comp.aep
+d Mixed Suite/Autosaves
+f Mixed Suite/Autosaves/edit_autosave.prproj
+d Mixed Suite/Cache
+f Mixed Suite/Cache/render.tmp
+d Premiere Only
+f Premiere Only/main.prproj
+d Resolve Only
+f Resolve Only/color.drp
+d Neutral Exchange
+f Neutral Exchange/sequence.xml
+f Neutral Exchange/timeline.aaf
+f README.txt

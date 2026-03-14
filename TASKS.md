@@ -210,46 +210,46 @@
 - [x] Определять `dir_type` (premiere/avid/aftereffects/resolve/mixed/unknown)
 
 ## 6.2. Sync with DB
-- [ ] Реализовать регистрацию новых project_dirs
-- [ ] Реализовать обновление existing project_dirs
-- [ ] Реализовать пометку missing project_dirs
-- [ ] Реализовать регистрацию найденных project_files
-- [ ] Реализовать first_seen / last_seen обновления
+- [x] Реализовать регистрацию новых project_dirs
+- [x] Реализовать обновление existing project_dirs
+- [x] Реализовать пометку missing project_dirs
+- [x] Реализовать регистрацию найденных project_files
+- [x] Реализовать first_seen / last_seen обновления
 
 ## 6.3. CLI
-- [ ] Добавить CLI команду `scan-structure`
-- [ ] Поддержать `scan-structure --root-id`
-- [ ] Поддержать `scan-structure --path`
+- [x] Добавить CLI команду `scan-structure`
+- [x] Поддержать `scan-structure --root-id`
+- [x] Поддержать `scan-structure --path`
 
 ## 6.4. Тесты
-- [ ] Unit tests structural scan
-- [ ] Integration test structural scan with sample tree
-- [ ] Fixture: nested project dirs
-- [ ] Fixture: autosave files
-- [ ] Fixture: cache dirs
+- [x] Unit tests structural scan
+- [x] Integration test structural scan with sample tree
+- [x] Fixture: nested project dirs
+- [x] Fixture: autosave files
+- [x] Fixture: cache dirs
 
 ---
 
 # 7. Inventory: incremental scan project_dirs
 
 ## 7.1. Project dir scan service
-- [ ] Реализовать `project_dir_scan_service.py`
-- [ ] Сканировать только known project_dirs
-- [ ] Выявлять new files
-- [ ] Выявлять changed files
-- [ ] Выявлять missing files
-- [ ] Обновлять size/mtime/ctime
+- [x] Реализовать `project_dir_scan_service.py`
+- [x] Сканировать только known project_dirs
+- [x] Выявлять new files
+- [x] Выявлять changed files
+- [x] Выявлять missing files
+- [x] Обновлять size/mtime/ctime
 
 ## 7.2. Decision support
-- [ ] Реализовать `file_stat_service.py`
-- [ ] Реализовать lightweight compare logic
+- [x] Реализовать `file_stat_service.py`
+- [x] Реализовать lightweight compare logic
 
 ## 7.3. CLI
-- [ ] Добавить CLI команду `scan-project-dirs`
+- [x] Добавить CLI команду `scan-project-dirs`
 
 ## 7.4. Тесты
-- [ ] Unit tests file change detection
-- [ ] Integration test incremental scan
+- [x] Unit tests file change detection
+- [x] Integration test incremental scan
 
 ---
 

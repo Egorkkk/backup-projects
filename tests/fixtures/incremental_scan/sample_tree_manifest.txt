@@ -1,0 +1,7 @@
+# Synthetic incremental scan fixture
+d workspace
+d workspace/Project Alpha
+d workspace/Project Alpha/Sub
+f workspace/Project Alpha/edit.prproj
+f workspace/Project Alpha/notes.txt
+f workspace/Project Alpha/Sub/clip.mov
