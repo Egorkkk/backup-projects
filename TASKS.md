@@ -339,23 +339,23 @@
 # 10. Restic integration
 
 ## 10.1. Adapter
-- [ ] Реализовать `restic_runner.py`
-- [ ] Реализовать `restic_adapter.py`
-- [ ] Поддержать backup from manifest
-- [ ] Поддержать env-based password/repo config
-- [ ] Логировать stdout/stderr
-- [ ] Парсить snapshot id
+- [x] Реализовать `restic_runner.py`
+- [x] Реализовать `restic_adapter.py`
+- [x] Поддержать backup from manifest
+- [x] Поддержать env-based password/repo config
+- [x] Логировать stdout/stderr
+- [x] Парсить snapshot id
 
 ## 10.2. Backup service
-- [ ] Реализовать `backup_service.py`
-- [ ] Интегрировать final manifest
-- [ ] Сохранять restic result
-- [ ] Обрабатывать failures
+- [x] Реализовать `backup_service.py`
+- [x] Интегрировать final manifest
+- [x] Сохранять restic result
+- [x] Обрабатывать failures
 
 ## 10.3. Verify/retention placeholders
-- [ ] Создать `verify_service.py` placeholder
-- [ ] Создать `retention_service.py` placeholder
-- [ ] Не реализовывать полноценный restore verify в v1
+- [x] Создать `verify_service.py` placeholder
+- [x] Создать `retention_service.py` placeholder
+- [x] Не реализовывать полноценный restore verify в v1
 
 ## 10.4. CLI
 - [ ] Добавить `backup`
