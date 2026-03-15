@@ -137,6 +137,18 @@ class RulesRepository:
         )
         return _to_excluded_pattern_record(row)
 
+    def get_excluded_pattern(self, pattern_id: int) -> ExcludedPatternRecord | None:
+        row = (
+            self._session.execute(
+                select(excluded_patterns).where(excluded_patterns.c.id == pattern_id)
+            )
+            .mappings()
+            .one_or_none()
+        )
+        if row is None:
+            return None
+        return _to_excluded_pattern_record(row)
+
     def update_excluded_pattern(
         self,
         pattern_id: int,

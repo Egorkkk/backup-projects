@@ -10,6 +10,7 @@ from sqlalchemy import (
     Table,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase
@@ -97,14 +98,25 @@ manual_includes = Table(
     "manual_includes",
     metadata,
     Column("id", Integer, primary_key=True),
-    Column("path", Text, nullable=False),
-    Column("include_type", Text, nullable=False),
-    Column("enabled", Boolean, nullable=False, default=True),
+    Column(
+        "root_id",
+        ForeignKey("roots.id", ondelete="CASCADE"),
+        nullable=False,
+    ),
+    Column("relative_path", Text, nullable=False),
+    Column("include_path_type", Text, nullable=False),
+    Column("recursive", Boolean, nullable=False, default=False, server_default=text("0")),
+    Column("force_include", Boolean, nullable=False, default=False, server_default=text("0")),
+    Column("enabled", Boolean, nullable=False, default=True, server_default=text("1")),
     Column("created_at", Text, nullable=False),
     Column("updated_at", Text, nullable=False),
-    UniqueConstraint("path", name="uq_manual_includes_path"),
-    Index("ix_manual_includes_enabled", "enabled"),
-    Index("ix_manual_includes_include_type", "include_type"),
+    UniqueConstraint(
+        "root_id",
+        "relative_path",
+        name="uq_manual_includes_root_relative_path",
+    ),
+    Index("ix_manual_includes_root_id", "root_id"),
+    Index("ix_manual_includes_root_id_enabled", "root_id", "enabled"),
 )
 
 extension_rules = Table(

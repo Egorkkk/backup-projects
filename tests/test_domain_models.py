@@ -82,7 +82,7 @@ def test_root_record_keeps_status_and_rescan_flag_as_separate_fields() -> None:
     assert "needs_structural_rescan" in root_field_names
 
 
-def test_candidate_file_final_decision_and_manifest_result_stay_minimal() -> None:
+def test_candidate_file_final_decision_and_manifest_result_use_expected_fields() -> None:
     assert [field.name for field in fields(CandidateFile)] == [
         "absolute_path",
         "extension",
@@ -100,10 +100,19 @@ def test_candidate_file_final_decision_and_manifest_result_stay_minimal() -> Non
         "reason",
         "oversize_action",
         "warning",
+        "manual_include_applied",
+        "force_include_applied",
+        "exclude_pattern",
+        "extension_policy_reason",
+        "should_store_unknown_extension",
+        "should_log_unknown_extension_warning",
     ]
     assert [field.name for field in fields(ManifestResult)] == [
         "manifest_paths",
         "decisions",
+        "manifest_file_path",
+        "json_manifest_file_path",
+        "summary_file_path",
     ]
 
 

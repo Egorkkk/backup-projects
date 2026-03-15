@@ -113,8 +113,11 @@ def test_record_to_dto_converters_map_repo_local_records_to_domain_models() -> N
     manual_include = to_manual_include(
         ManualIncludeRecord(
             id=4,
-            path="/mnt/raid_a/projects/show-a/extra.aaf",
-            include_type="file",
+            root_id=1,
+            relative_path="show-a/extra.aaf",
+            include_path_type="file",
+            recursive=True,
+            force_include=False,
             enabled=True,
             created_at="2026-03-13T10:30:00+00:00",
             updated_at="2026-03-13T11:30:00+00:00",
@@ -157,7 +160,11 @@ def test_record_to_dto_converters_map_repo_local_records_to_domain_models() -> N
     assert root_record.needs_structural_rescan is True
     assert project_dir_record.status is ProjectDirStatus.MISSING
     assert project_file_record.status is ProjectFileStatus.ACTIVE
+    assert manual_include.root_id == 1
+    assert manual_include.relative_path == "show-a/extra.aaf"
     assert manual_include.include_path_type is IncludePathType.FILE
+    assert manual_include.recursive is True
+    assert manual_include.force_include is False
     assert extension_rule.oversize_action is OversizeAction.SKIP
     assert excluded_pattern.pattern_type == "directory_name"
     assert isinstance(run_summary, RunSummary)

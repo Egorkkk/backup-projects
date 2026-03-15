@@ -59,8 +59,11 @@ class ProjectFileRecord:
 @dataclass(frozen=True, slots=True)
 class ManualInclude:
     id: int
-    path: str
+    root_id: int
+    relative_path: str
     include_path_type: IncludePathType
+    recursive: bool
+    force_include: bool
     enabled: bool
     created_at: str
     updated_at: str
@@ -117,9 +120,18 @@ class FinalDecision:
     reason: str
     oversize_action: OversizeAction | None = None
     warning: str | None = None
+    manual_include_applied: bool = False
+    force_include_applied: bool = False
+    exclude_pattern: ExcludedPattern | None = None
+    extension_policy_reason: str | None = None
+    should_store_unknown_extension: bool = False
+    should_log_unknown_extension_warning: bool = False
 
 
 @dataclass(frozen=True, slots=True)
 class ManifestResult:
     manifest_paths: tuple[str, ...]
     decisions: tuple[FinalDecision, ...]
+    manifest_file_path: str
+    json_manifest_file_path: str
+    summary_file_path: str

@@ -1,0 +1,17 @@
+d workspace
+d workspace/ProjectAlpha
+d workspace/ProjectAlpha/Nested
+f workspace/ProjectAlpha/unchanged.txt
+f workspace/ProjectAlpha/changed.txt
+f workspace/ProjectAlpha/reactivated.txt
+f workspace/ProjectAlpha/Nested/new_nested.txt
+d incoming
+f incoming/direct_file.txt
+d packages
+d packages/Sub
+f packages/top.txt
+f packages/Sub/deep.txt
+d disabled
+f disabled/ignored.txt
+d unrelated
+f unrelated/untouched.txt

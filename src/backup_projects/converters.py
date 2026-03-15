@@ -141,8 +141,11 @@ def to_project_file_record(record: RepoProjectFileRecord) -> DomainProjectFileRe
 def to_manual_include(record: ManualIncludeRecord) -> ManualInclude:
     return ManualInclude(
         id=record.id,
-        path=record.path,
-        include_path_type=include_path_type_from_scalar(record.include_type),
+        root_id=record.root_id,
+        relative_path=record.relative_path,
+        include_path_type=include_path_type_from_scalar(record.include_path_type),
+        recursive=record.recursive,
+        force_include=record.force_include,
         enabled=record.enabled,
         created_at=record.created_at,
         updated_at=record.updated_at,

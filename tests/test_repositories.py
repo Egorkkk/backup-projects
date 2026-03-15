@@ -179,33 +179,64 @@ def test_project_dirs_and_project_files_repositories_baseline_flow(db_session: S
 
 
 def test_manual_includes_repository_create_lookup_list_and_toggle(db_session: Session) -> None:
+    roots_repo = RootsRepository(db_session)
     repo = ManualIncludesRepository(db_session)
+    root = roots_repo.create(
+        raid_name="raid_a",
+        name="show-a",
+        path="/mnt/raid_a/projects/show-a",
+        device_id=100,
+        inode=200,
+        mtime_ns=300,
+        ctime_ns=400,
+        first_seen_at="2026-03-13T09:00:00+00:00",
+        last_seen_at="2026-03-13T09:00:00+00:00",
+    )
 
     assert repo.get_by_id(9999) is None
 
     created = repo.create(
-        path="/mnt/raid_a/projects/show-a/episode-1/extra.aaf",
-        include_type="file",
+        root_id=root.id,
+        relative_path="episode-1/extra.aaf",
+        include_path_type="file",
+        recursive=False,
+        force_include=False,
         created_at="2026-03-13T10:00:00+00:00",
         updated_at="2026-03-13T10:00:00+00:00",
     )
 
     assert repo.get_by_id(created.id) == created
-    assert repo.get_by_path(created.path) == created
-    assert repo.get_by_path("/missing/manual-include.aaf") is None
-    assert repo.list_all() == [created]
-    assert repo.list_enabled() == [created]
+    assert (
+        repo.get_by_root_and_path(root_id=root.id, relative_path="episode-1/extra.aaf") == created
+    )
+    assert (
+        repo.get_by_root_and_path(root_id=root.id, relative_path="missing/manual-include.aaf")
+        is None
+    )
+    assert repo.list_by_root(root.id) == [created]
+    assert repo.list_enabled_by_root(root.id) == [created]
 
-    repo.set_enabled(
+    repo.update(
         created.id,
+        relative_path="episode-1/extra-copy.aaf",
+        include_path_type="directory",
+        recursive=True,
+        force_include=True,
         enabled=False,
         updated_at="2026-03-13T11:00:00+00:00",
     )
     disabled = repo.get_by_id(created.id)
 
     assert disabled is not None
+    assert disabled.relative_path == "episode-1/extra-copy.aaf"
+    assert disabled.include_path_type == "directory"
+    assert disabled.recursive is True
+    assert disabled.force_include is True
     assert disabled.enabled is False
-    assert repo.list_enabled() == []
+    assert repo.list_enabled_by_root(root.id) == []
+
+    repo.delete(created.id)
+    assert repo.get_by_id(created.id) is None
 
 
 def test_settings_repository_list_get_and_upsert(db_session: Session) -> None:
@@ -262,13 +293,17 @@ def test_rules_repository_rules_and_patterns(db_session: Session) -> None:
     )
 
     updated_rule = repo.get_extension_rule("aaf")
+    updated_pattern = repo.get_excluded_pattern(pattern.id)
     patterns = repo.list_excluded_patterns()
 
     assert updated_rule is not None
+    assert updated_pattern is not None
     assert repo.list_extension_rules() == [updated_rule]
     assert updated_rule.enabled is False
     assert updated_rule.max_size_bytes == 209715200
     assert repo.get_extension_rule("missing-extension") is None
+    assert updated_pattern.enabled is False
+    assert repo.get_excluded_pattern(9999) is None
     assert patterns[0].enabled is False
     assert repo.list_extension_rules(enabled_only=True) == []
     assert repo.list_excluded_patterns(enabled_only=True) == []

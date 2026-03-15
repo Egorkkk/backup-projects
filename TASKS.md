@@ -256,83 +256,83 @@
 # 8. Manual includes
 
 ## 8.1. DB + repo
-- [ ] Реализовать CRUD для `manual_includes`
+- [x] Реализовать CRUD для `manual_includes`
 
 ## 8.2. Service
-- [ ] Реализовать `manual_include_scan_service.py`
-- [ ] Поддержать file include
-- [ ] Поддержать dir include
-- [ ] Поддержать recursive
-- [ ] Поддержать force_include
-- [ ] Поддержать disabled include
+- [x] Реализовать `manual_include_scan_service.py`
+- [x] Поддержать file include
+- [x] Поддержать dir include
+- [x] Поддержать recursive
+- [x] Поддержать force_include
+- [x] Поддержать disabled include
 
 ## 8.3. CLI
-- [ ] Добавить `include add-file`
-- [ ] Добавить `include add-dir`
-- [ ] Добавить `include list`
-- [ ] Добавить `include disable`
-- [ ] Добавить `include enable`
+- [x] Добавить `include add-file`
+- [x] Добавить `include add-dir`
+- [x] Добавить `include list`
+- [x] Добавить `include disable`
+- [x] Добавить `include enable`
 
 ## 8.4. Тесты
-- [ ] Unit tests manual include resolution
-- [ ] Integration tests for manual includes
+- [x] Unit tests manual include resolution
+- [x] Integration tests for manual includes
 
 ---
 
 # 9. Policy engine
 
 ## 9.1. Rule loading
-- [ ] Реализовать `rule_loader.py`
-- [ ] Загружать extension rules из DB
-- [ ] Загружать excluded patterns из DB
-- [ ] Загружать global settings
+- [x] Реализовать `rule_loader.py`
+- [x] Загружать extension rules из DB
+- [x] Загружать excluded patterns из DB
+- [x] Загружать global settings
 
 ## 9.2. Excludes
-- [ ] Реализовать `exclude_matcher.py`
-- [ ] Поддержать dirname rule
-- [ ] Поддержать glob rule
-- [ ] Поддержать substring rule
-- [ ] Поддержать regex rule
+- [x] Реализовать `exclude_matcher.py`
+- [x] Поддержать dirname rule
+- [x] Поддержать glob rule
+- [x] Поддержать substring rule
+- [x] Поддержать regex rule
 
 ## 9.3. Extension rules
-- [ ] Реализовать `extension_policy_service.py`
-- [ ] Проверка allowed extension
-- [ ] Проверка max_size_bytes
-- [ ] Реакция на oversize:
-  - [ ] skip
-  - [ ] warn
-  - [ ] include
+- [x] Реализовать `extension_policy_service.py`
+- [x] Проверка allowed extension
+- [x] Проверка max_size_bytes
+- [x] Реакция на oversize:
+  - [x] skip
+  - [x] warn
+  - [x] include
 
 ## 9.4. Final decision engine
-- [ ] Реализовать `decision_engine.py`
-- [ ] Учитывать manual include
-- [ ] Учитывать force_include
-- [ ] Учитывать excludes
-- [ ] Учитывать extension rules
-- [ ] Учитывать size rules
-- [ ] Возвращать `FinalDecision`
+- [x] Реализовать `decision_engine.py`
+- [x] Учитывать manual include
+- [x] Учитывать force_include
+- [x] Учитывать excludes
+- [x] Учитывать extension rules
+- [x] Учитывать size rules
+- [x] Возвращать `FinalDecision`
 
 ## 9.5. Manifest
-- [ ] Реализовать `manifest_builder.py`
-- [ ] Формировать final file list
-- [ ] Сохранять manifest на диск
-- [ ] Сохранять machine-readable JSON manifest
-- [ ] Сохранять human-readable summary
+- [x] Реализовать `manifest_builder.py`
+- [x] Формировать final file list
+- [x] Сохранять manifest на диск
+- [x] Сохранять machine-readable JSON manifest
+- [x] Сохранять human-readable summary
 
 ## 9.6. CLI
-- [ ] Добавить `dry-run`
-- [ ] Добавить `rules list`
-- [ ] Добавить `rules add-extension`
-- [ ] Добавить `rules update-extension`
-- [ ] Добавить `rules add-exclude`
-- [ ] Добавить `rules disable-exclude`
+- [x] Добавить `dry-run`
+- [x] Добавить `rules list`
+- [x] Добавить `rules add-extension`
+- [x] Добавить `rules update-extension`
+- [x] Добавить `rules add-exclude`
+- [x] Добавить `rules disable-exclude`
 
 ## 9.7. Тесты
-- [ ] Unit tests exclude matcher
-- [ ] Unit tests extension rules
-- [ ] Unit tests oversize decisions
-- [ ] Unit tests force include override
-- [ ] Unit tests manifest builder
+- [x] Unit tests exclude matcher
+- [x] Unit tests extension rules
+- [x] Unit tests oversize decisions
+- [x] Unit tests force include override
+- [x] Unit tests manifest builder
 
 ---
 
