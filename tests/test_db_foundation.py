@@ -34,8 +34,9 @@ def test_create_schema_creates_core_tables_and_constraints(tmp_path: Path) -> No
     create_schema(engine)
 
     inspector = inspect(engine)
+    table_names = set(inspector.get_table_names())
 
-    assert set(inspector.get_table_names()) == {
+    assert table_names == {
         "excluded_patterns",
         "extension_rules",
         "manual_includes",
@@ -47,6 +48,7 @@ def test_create_schema_creates_core_tables_and_constraints(tmp_path: Path) -> No
         "settings",
         "unrecognized_extensions",
     }
+    assert "run_artifacts" not in table_names
 
     project_dirs_foreign_keys = inspector.get_foreign_keys("project_dirs")
     project_files_uniques = inspector.get_unique_constraints("project_files")

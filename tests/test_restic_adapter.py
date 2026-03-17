@@ -36,6 +36,45 @@ def test_parse_restic_output_returns_last_summary_object() -> None:
     }
 
 
+def test_parse_restic_output_tolerates_blank_lines_between_json_lines() -> None:
+    stdout = "\n".join(
+        [
+            '{"message_type":"status","files_done":1}',
+            "",
+            '{"message_type":"summary","snapshot_id":"abc123","files_new":3}',
+            "",
+        ]
+    )
+
+    result = parse_restic_output(stdout=stdout, stderr="warning")
+
+    assert result.snapshot_id == "abc123"
+    assert result.summary_payload == {
+        "message_type": "summary",
+        "snapshot_id": "abc123",
+        "files_new": 3,
+    }
+
+
+def test_parse_restic_output_ignores_valid_non_summary_objects_until_final_summary() -> None:
+    stdout = "\n".join(
+        [
+            '{"message_type":"status","files_done":1}',
+            '{"message_type":"verbose_status","current_files":["a.txt"]}',
+            '{"message_type":"summary","snapshot_id":"abc123","files_new":3}',
+        ]
+    )
+
+    result = parse_restic_output(stdout=stdout, stderr="warning")
+
+    assert result.snapshot_id == "abc123"
+    assert result.summary_payload == {
+        "message_type": "summary",
+        "snapshot_id": "abc123",
+        "files_new": 3,
+    }
+
+
 def test_parse_restic_output_raises_for_malformed_json() -> None:
     with pytest.raises(ResticOutputParseError) as exc_info:
         parse_restic_output(

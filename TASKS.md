@@ -358,33 +358,33 @@
 - [x] Не реализовывать полноценный restore verify в v1
 
 ## 10.4. CLI
-- [ ] Добавить `backup`
-- [ ] Добавить `run-daily`
-- [ ] Добавить `run-weekly` placeholder flow
+- [x] Добавить `backup`
+- [x] Добавить `run-daily`
+- [x] Добавить `run-weekly` placeholder flow
 
 ## 10.5. Тесты
-- [ ] Unit tests restic output parsing
-- [ ] Integration tests with mocked restic runner
+- [x] Unit tests restic output parsing
+- [x] Integration tests with mocked restic runner
 
 ---
 
 # 11. Runs, reports, logging
 
 ## 11.1. Run lifecycle
-- [ ] Реализовать `run_service.py`
-- [ ] Реализовать `start_run`
-- [ ] Реализовать `append_run_event`
-- [ ] Реализовать `finish_run`
+- [x] Реализовать `run_service.py`
+- [x] Реализовать `start_run`
+- [x] Реализовать `append_run_event`
+- [x] Реализовать `finish_run`
 
 ## 11.2. Reports
-- [ ] Реализовать `report_service.py`
-- [ ] Генерировать JSON report
-- [ ] Генерировать human-readable text report
-- [ ] Генерировать HTML export report
+- [x] Реализовать `report_service.py`
+- [x] Генерировать JSON report
+- [x] Генерировать human-readable text report
+- [x] Генерировать HTML export report
 
 ## 11.3. Summaries
-- [ ] Реализовать `summary_service.py`
-- [ ] Собирать counts по new/changed/skipped/included
+- [x] Реализовать `summary_service.py`
+- [x] Собирать counts по new/changed/skipped/included
 
 ## 11.4. Logging
 - [ ] Реализовать `logging_setup.py`
