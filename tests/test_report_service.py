@@ -68,6 +68,7 @@ def test_write_run_report_writes_canonical_json_without_raw_process_fields(
 
     assert payload["format_version"] == 1
     assert payload["run"]["id"] == 42
+    assert set(payload) == {"format_version", "run", "events", "targets"}
     assert payload["events"][0] == {
         "event_time": "2026-03-17T10:01:00+00:00",
         "level": "INFO",
@@ -94,6 +95,23 @@ def test_write_run_report_writes_canonical_json_without_raw_process_fields(
     assert "stderr" not in payload["targets"][0]["backup"]
     assert "argv" not in payload["targets"][0]["backup"]
     assert "duration_seconds" not in payload["targets"][0]["backup"]
+
+
+def test_write_run_report_uses_deterministic_paths_for_all_renderers(tmp_path: Path) -> None:
+    reports_dir = tmp_path / "reports"
+    reports_dir.mkdir()
+
+    artifacts = write_run_report(
+        reports_dir=reports_dir,
+        run=_make_run_record(),
+        events=(_make_run_event(),),
+        targets=(RunReportTargetInput(status="completed"),),
+    )
+
+    assert Path(artifacts.report_dir) == reports_dir / "run-42"
+    assert Path(artifacts.json_report_path) == reports_dir / "run-42" / "report.json"
+    assert Path(artifacts.text_report_path) == reports_dir / "run-42" / "report.txt"
+    assert Path(artifacts.html_report_path) == reports_dir / "run-42" / "report.html"
 
 
 def test_write_run_report_writes_human_readable_text_report(tmp_path: Path) -> None:

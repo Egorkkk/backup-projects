@@ -387,19 +387,19 @@
 - [x] Собирать counts по new/changed/skipped/included
 
 ## 11.4. Logging
-- [ ] Реализовать `logging_setup.py`
-- [ ] Пер-run log files
-- [ ] Console logging
-- [ ] File logging
+- [x] Реализовать `logging_setup.py`
+- [x] Пер-run log files
+- [x] Console logging
+- [x] File logging
 
 ## 11.5. CLI
-- [ ] Добавить `runs list`
-- [ ] Добавить `runs show`
-- [ ] Добавить `files list-skipped`
+- [x] Добавить `runs list`
+- [x] Добавить `runs show`
+- [x] Добавить `files list-skipped`
 
 ## 11.6. Тесты
-- [ ] Tests for run lifecycle
-- [ ] Tests for report generation
+- [x] Tests for run lifecycle
+- [x] Tests for report generation
 
 ---
 

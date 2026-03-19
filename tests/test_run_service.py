@@ -120,6 +120,16 @@ def test_finish_run_updates_status_and_finished_at(db_session: Session) -> None:
     assert stored_run.finished_at == "2026-03-17T12:05:00+00:00"
 
 
+def test_finish_run_raises_lookup_error_for_unknown_run_id(db_session: Session) -> None:
+    with pytest.raises(LookupError, match="^Run not found for id: 9999$"):
+        finish_run(
+            session=db_session,
+            run_id=9999,
+            status="failed",
+            now=lambda: datetime(2026, 3, 17, 12, 5, tzinfo=timezone.utc),
+        )
+
+
 def test_finish_run_rejects_repeated_finish_and_keeps_original_state(
     db_session: Session,
 ) -> None:
