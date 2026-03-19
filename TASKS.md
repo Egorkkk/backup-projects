@@ -406,41 +406,41 @@
 # 12. Locking / concurrency
 
 ## 12.1. File lock
-- [ ] Реализовать `file_lock.py`
-- [ ] Реализовать глобальный lock file
+- [x] Реализовать `file_lock.py`
+- [x] Реализовать глобальный lock file
 
 ## 12.2. Run lock service
-- [ ] Реализовать `run_lock.py`
-- [ ] Проверка already running state
-- [ ] Корректное завершение с `locked`
+- [x] Реализовать `run_lock.py`
+- [x] Проверка already running state
+- [x] Корректное завершение с `locked`
 
 ## 12.3. Интеграция
-- [ ] Подключить lock в daily job
-- [ ] Подключить lock в backup job
-- [ ] Подключить lock в manual web actions
+- [x] Подключить lock в daily job
+- [x] Подключить lock в backup job
+- [x] Подключить lock в manual web actions
 
 ## 12.4. Тесты
-- [ ] Unit tests locking
-- [ ] Integration test double-run protection
+- [x] Unit tests locking
+- [x] Integration test double-run protection
 
 ---
 
 # 13. Jobs orchestration
 
 ## 13.1. Daily job
-- [ ] Реализовать `daily_job.py`
-- [ ] Последовательность:
-  - [ ] start run
-  - [ ] acquire lock
-  - [ ] scan roots
-  - [ ] structural rescan changed/new roots
-  - [ ] scan project dirs
-  - [ ] scan manual includes
-  - [ ] evaluate policy
-  - [ ] build manifest
-  - [ ] run restic backup
-  - [ ] write report
-  - [ ] finish run
+- [x] Реализовать `daily_job.py`
+- [x] Последовательность:
+  - [x] start run
+  - [x] acquire lock
+  - [x] scan roots
+  - [x] structural rescan changed/new roots
+  - [x] scan project dirs
+  - [x] scan manual includes
+  - [x] evaluate policy
+  - [x] build manifest
+  - [x] run restic backup
+  - [x] write report
+  - [x] finish run
 
 ## 13.2. Weekly job
 - [ ] Реализовать `weekly_job.py`

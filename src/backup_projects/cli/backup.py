@@ -19,6 +19,8 @@ from backup_projects.services.backup_service import (
 )
 from backup_projects.services.dry_run_service import build_root_dry_run_manifest
 from backup_projects.services.manifest_builder import write_manifest
+from backup_projects.services.run_lock import RunLockDenied, try_acquire_run_lock
+from backup_projects.services.run_service import finish_run, start_run
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -63,27 +65,56 @@ def main(argv: Sequence[str] | None = None) -> int:
             except (LookupError, ValueError) as exc:
                 print(str(exc), file=sys.stderr)
                 return 2
-            built_manifest = build_root_dry_run_manifest(
+            run = start_run(
                 session=session,
-                root_id=root.id,
+                run_type="backup",
+                trigger_mode="manual",
             )
-            try:
-                manifest_result = write_manifest(
-                    built_manifest=built_manifest,
-                    output_dir=args.output_dir,
-                    artifact_stem=args.artifact_stem,
-                )
-            except ValueError as exc:
-                raise RuntimeError(str(exc)) from exc
-            backup_service_result = run_backup_from_manifest(
-                BackupServiceRequest(
-                    manifest_result=manifest_result,
-                    restic_binary=config.app_config.restic.binary,
-                    restic_repository=config.app_config.restic.repository,
-                    restic_password_env_var=config.app_config.restic.password_env_var,
-                    restic_timeout_seconds=config.app_config.restic.timeout_seconds,
-                )
+            lock_result = try_acquire_run_lock(
+                session=session,
+                run_id=run.id,
+                locks_dir=_resolve_locks_dir(config),
             )
+            if isinstance(lock_result, RunLockDenied):
+                _print_locked_run(lock_result)
+                return 0
+
+            with lock_result:
+                try:
+                    built_manifest = build_root_dry_run_manifest(
+                        session=session,
+                        root_id=root.id,
+                    )
+                    try:
+                        manifest_result = write_manifest(
+                            built_manifest=built_manifest,
+                            output_dir=args.output_dir,
+                            artifact_stem=args.artifact_stem,
+                        )
+                    except ValueError as exc:
+                        raise RuntimeError(str(exc)) from exc
+                    backup_service_result = run_backup_from_manifest(
+                        BackupServiceRequest(
+                            manifest_result=manifest_result,
+                            restic_binary=config.app_config.restic.binary,
+                            restic_repository=config.app_config.restic.repository,
+                            restic_password_env_var=config.app_config.restic.password_env_var,
+                            restic_timeout_seconds=config.app_config.restic.timeout_seconds,
+                        )
+                    )
+                except Exception:
+                    finish_run(
+                        session=session,
+                        run_id=run.id,
+                        status="failed",
+                    )
+                    raise
+
+                finish_run(
+                    session=session,
+                    run_id=run.id,
+                    status="completed",
+                )
 
         _print_backup_success(
             root_id=root.id,
@@ -103,6 +134,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             engine.dispose()
 
     return 0
+
+
+def _resolve_locks_dir(config) -> Path:
+    return resolve_path(config.app_path.parent / config.app_config.runtime.locks_dir)
 
 
 def _resolve_target_root(*, session, root_id: int | None, root_path: str | None):
@@ -142,6 +177,11 @@ def _print_backup_success(
     print(f"json-manifest-file: {manifest_result.json_manifest_file_path}")
     print(f"summary-file: {manifest_result.summary_file_path}")
     print(f"snapshot-id: {snapshot_id}")
+
+
+def _print_locked_run(lock_result: RunLockDenied) -> None:
+    print(f"Backup run locked for run-id: {lock_result.run.id}")
+    print(f"lock-file: {lock_result.lock_path}")
 
 
 if __name__ == "__main__":

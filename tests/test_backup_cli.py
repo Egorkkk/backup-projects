@@ -1,12 +1,66 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from pathlib import Path
 from types import SimpleNamespace
 
 from backup_projects.adapters.restic_adapter import ResticBackupResult
 from backup_projects.domain import ManifestResult
 from backup_projects.services.backup_service import BackupServiceResult
 from backup_projects.services.manifest_builder import BuiltManifest
+from backup_projects.services.run_lock import AcquiredRunLock
+from backup_projects.services.run_service import RunLifecycleRecord
+
+
+def _make_backup_config() -> SimpleNamespace:
+    return SimpleNamespace(
+        app_path=Path("/tmp/config/app.yaml"),
+        app_config=SimpleNamespace(
+            runtime=SimpleNamespace(locks_dir="runtime/locks"),
+            restic=SimpleNamespace(
+                binary="restic",
+                repository="/mnt/backup/repo",
+                password_env_var="RESTIC_PASSWORD",
+                timeout_seconds=7200,
+            ),
+        ),
+    )
+
+
+def _patch_run_lifecycle_locking(monkeypatch, backup_module) -> None:
+    monkeypatch.setattr(
+        backup_module,
+        "start_run",
+        lambda **kwargs: RunLifecycleRecord(
+            id=52,
+            run_type="backup",
+            status="running",
+            started_at="2026-03-20T10:00:00+00:00",
+            trigger_mode="manual",
+            finished_at=None,
+        ),
+    )
+    monkeypatch.setattr(
+        backup_module,
+        "try_acquire_run_lock",
+        lambda **kwargs: AcquiredRunLock(
+            run_id=52,
+            lock_path="/tmp/runtime/locks/run.lock",
+            _file_lock=None,
+        ),
+    )
+    monkeypatch.setattr(
+        backup_module,
+        "finish_run",
+        lambda *, session, run_id, status, now=None: RunLifecycleRecord(
+            id=run_id,
+            run_type="backup",
+            status=status,
+            started_at="2026-03-20T10:00:00+00:00",
+            trigger_mode="manual",
+            finished_at="2026-03-20T10:05:00+00:00",
+        ),
+    )
 
 
 def test_backup_requires_root_selector(capsys) -> None:
@@ -95,16 +149,7 @@ def test_backup_root_id_flow_writes_manifest_and_runs_backup(
 ) -> None:
     from backup_projects.cli import backup as backup_module
 
-    fake_config = SimpleNamespace(
-        app_config=SimpleNamespace(
-            restic=SimpleNamespace(
-                binary="restic",
-                repository="/mnt/backup/repo",
-                password_env_var="RESTIC_PASSWORD",
-                timeout_seconds=7200,
-            )
-        )
-    )
+    fake_config = _make_backup_config()
     calls: list[tuple] = []
     root_record = SimpleNamespace(id=7, path="/mnt/raid_a/projects/show-a")
     built_manifest = BuiltManifest(
@@ -173,6 +218,7 @@ def test_backup_root_id_flow_writes_manifest_and_runs_backup(
     )
     monkeypatch.setattr(backup_module, "session_scope", fake_session_scope)
     monkeypatch.setattr(backup_module, "RootsRepository", FakeRootsRepository)
+    _patch_run_lifecycle_locking(monkeypatch, backup_module)
     monkeypatch.setattr(
         backup_module,
         "build_root_dry_run_manifest",
@@ -246,16 +292,7 @@ def test_backup_root_id_flow_writes_manifest_and_runs_backup(
 def test_backup_root_path_flow_resolves_path_before_lookup(monkeypatch, capsys) -> None:
     from backup_projects.cli import backup as backup_module
 
-    fake_config = SimpleNamespace(
-        app_config=SimpleNamespace(
-            restic=SimpleNamespace(
-                binary="restic",
-                repository="/mnt/backup/repo",
-                password_env_var="RESTIC_PASSWORD",
-                timeout_seconds=7200,
-            )
-        )
-    )
+    fake_config = _make_backup_config()
     calls: list[tuple] = []
     root_record = SimpleNamespace(id=8, path="/mnt/raid_a/projects/show-b")
     built_manifest = BuiltManifest(
@@ -323,6 +360,7 @@ def test_backup_root_path_flow_resolves_path_before_lookup(monkeypatch, capsys) 
     )
     monkeypatch.setattr(backup_module, "session_scope", fake_session_scope)
     monkeypatch.setattr(backup_module, "RootsRepository", FakeRootsRepository)
+    _patch_run_lifecycle_locking(monkeypatch, backup_module)
     monkeypatch.setattr(
         backup_module,
         "resolve_path",
@@ -369,16 +407,7 @@ def test_backup_write_manifest_failure_is_operational_failure(
 ) -> None:
     from backup_projects.cli import backup as backup_module
 
-    fake_config = SimpleNamespace(
-        app_config=SimpleNamespace(
-            restic=SimpleNamespace(
-                binary="restic",
-                repository="/mnt/backup/repo",
-                password_env_var="RESTIC_PASSWORD",
-                timeout_seconds=7200,
-            )
-        )
-    )
+    fake_config = _make_backup_config()
     root_record = SimpleNamespace(id=9, path="/mnt/raid_a/projects/show-c")
     built_manifest = BuiltManifest(
         manifest_paths=(),
@@ -422,6 +451,7 @@ def test_backup_write_manifest_failure_is_operational_failure(
     )
     monkeypatch.setattr(backup_module, "session_scope", fake_session_scope)
     monkeypatch.setattr(backup_module, "RootsRepository", FakeRootsRepository)
+    _patch_run_lifecycle_locking(monkeypatch, backup_module)
     monkeypatch.setattr(
         backup_module,
         "build_root_dry_run_manifest",
@@ -456,16 +486,7 @@ def test_backup_write_manifest_failure_is_operational_failure(
 def test_backup_runtime_failure_returns_exit_code_1(monkeypatch, capsys) -> None:
     from backup_projects.cli import backup as backup_module
 
-    fake_config = SimpleNamespace(
-        app_config=SimpleNamespace(
-            restic=SimpleNamespace(
-                binary="restic",
-                repository="/mnt/backup/repo",
-                password_env_var="RESTIC_PASSWORD",
-                timeout_seconds=7200,
-            )
-        )
-    )
+    fake_config = _make_backup_config()
     root_record = SimpleNamespace(id=10, path="/mnt/raid_a/projects/show-d")
     built_manifest = BuiltManifest(
         manifest_paths=(),
@@ -516,6 +537,7 @@ def test_backup_runtime_failure_returns_exit_code_1(monkeypatch, capsys) -> None
     )
     monkeypatch.setattr(backup_module, "session_scope", fake_session_scope)
     monkeypatch.setattr(backup_module, "RootsRepository", FakeRootsRepository)
+    _patch_run_lifecycle_locking(monkeypatch, backup_module)
     monkeypatch.setattr(
         backup_module,
         "build_root_dry_run_manifest",
@@ -556,16 +578,7 @@ def test_backup_service_value_error_is_operational_failure(
 ) -> None:
     from backup_projects.cli import backup as backup_module
 
-    fake_config = SimpleNamespace(
-        app_config=SimpleNamespace(
-            restic=SimpleNamespace(
-                binary="restic",
-                repository="/mnt/backup/repo",
-                password_env_var="RESTIC_PASSWORD",
-                timeout_seconds=7200,
-            )
-        )
-    )
+    fake_config = _make_backup_config()
     root_record = SimpleNamespace(id=11, path="/mnt/raid_a/projects/show-e")
     built_manifest = BuiltManifest(
         manifest_paths=(),
@@ -616,6 +629,7 @@ def test_backup_service_value_error_is_operational_failure(
     )
     monkeypatch.setattr(backup_module, "session_scope", fake_session_scope)
     monkeypatch.setattr(backup_module, "RootsRepository", FakeRootsRepository)
+    _patch_run_lifecycle_locking(monkeypatch, backup_module)
     monkeypatch.setattr(
         backup_module,
         "build_root_dry_run_manifest",
@@ -655,16 +669,7 @@ def test_backup_service_value_error_is_operational_failure(
 def test_backup_lookup_failure_returns_exit_code_2(monkeypatch, capsys) -> None:
     from backup_projects.cli import backup as backup_module
 
-    fake_config = SimpleNamespace(
-        app_config=SimpleNamespace(
-            restic=SimpleNamespace(
-                binary="restic",
-                repository="/mnt/backup/repo",
-                password_env_var="RESTIC_PASSWORD",
-                timeout_seconds=7200,
-            )
-        )
-    )
+    fake_config = _make_backup_config()
 
     class FakeEngine:
         def dispose(self) -> None:
