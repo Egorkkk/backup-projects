@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Rules{% endblock %}
+
+{% block content %}
+  <section class="shell">
+    <h1>Rules</h1>
+
+    <section>
+      <h2>Default .aaf size limit</h2>
+      <p>{{ rules_page.aaf_default_size_bytes }} bytes (100 MB)</p>
+    </section>
+
+    {% if error_message %}
+      <section>
+        <p>{{ error_message }}</p>
+      </section>
+    {% endif %}
+
+    <section>
+      <h2>Extension rules</h2>
+
+      <form method="post" action="{{ url_for('create_extension_rule_handler') }}">
+        <label for="extension">Extension</label>
+        <input id="extension" name="extension" type="text" required>
+
+        <label for="extension_enabled">Enabled</label>
+        <select id="extension_enabled" name="enabled">
+          <option value="true">true</option>
+          <option value="false">false</option>
+        </select>
+
+        <label for="extension_max_size_bytes">Max size bytes</label>
+        <input id="extension_max_size_bytes" name="max_size_bytes" type="number" min="0">
+
+        <label for="extension_oversize_action">Oversize action</label>
+        <select id="extension_oversize_action" name="oversize_action">
+          <option value="include">include</option>
+          <option value="skip">skip</option>
+          <option value="warn">warn</option>
+        </select>
+
+        <button type="submit">Create extension rule</button>
+      </form>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Id</th>
+            <th>Extension</th>
+            <th>Enabled</th>
+            <th>Max size bytes</th>
+            <th>Oversize action</th>
+            <th>Update</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rule in rules_page.extension_rules %}
+            <tr>
+              <td>{{ rule.id }}</td>
+              <td>{{ rule.extension }}</td>
+              <td>{{ rule.enabled }}</td>
+              <td>{{ rule.max_size_bytes }}</td>
+              <td>{{ rule.oversize_action }}</td>
+              <td>
+                <form method="post" action="{{ url_for('update_extension_rule_handler', extension=rule.extension) }}">
+                  <select name="enabled">
+                    <option value="true" {% if rule.enabled %}selected{% endif %}>true</option>
+                    <option value="false" {% if not rule.enabled %}selected{% endif %}>false</option>
+                  </select>
+                  <input name="max_size_bytes" type="number" min="0" value="{{ '' if rule.max_size_bytes is none else rule.max_size_bytes }}">
+                  <select name="clear_max_size">
+                    <option value="false" {% if rule.max_size_bytes is not none %}selected{% endif %}>keep/set</option>
+                    <option value="true" {% if rule.max_size_bytes is none %}selected{% endif %}>clear</option>
+                  </select>
+                  <select name="oversize_action">
+                    <option value="include" {% if rule.oversize_action == 'include' %}selected{% endif %}>include</option>
+                    <option value="skip" {% if rule.oversize_action == 'skip' %}selected{% endif %}>skip</option>
+                    <option value="warn" {% if rule.oversize_action == 'warn' %}selected{% endif %}>warn</option>
+                  </select>
+                  <button type="submit">Update</button>
+                </form>
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="6">No extension rules found.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Excluded patterns</h2>
+
+      <form method="post" action="{{ url_for('create_excluded_pattern_handler') }}">
+        <label for="pattern_type">Pattern type</label>
+        <select id="pattern_type" name="pattern_type">
+          <option value="directory_name">directory_name</option>
+          <option value="glob">glob</option>
+          <option value="path_substring">path_substring</option>
+          <option value="regex">regex</option>
+        </select>
+
+        <label for="pattern_value">Pattern value</label>
+        <input id="pattern_value" name="pattern_value" type="text" required>
+
+        <label for="pattern_enabled">Enabled</label>
+        <select id="pattern_enabled" name="enabled">
+          <option value="true">true</option>
+          <option value="false">false</option>
+        </select>
+
+        <button type="submit">Create excluded pattern</button>
+      </form>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Id</th>
+            <th>Pattern type</th>
+            <th>Pattern value</th>
+            <th>Enabled</th>
+            <th>Toggle</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pattern in rules_page.excluded_patterns %}
+            <tr>
+              <td>{{ pattern.id }}</td>
+              <td>{{ pattern.pattern_type }}</td>
+              <td>{{ pattern.pattern_value }}</td>
+              <td>{{ pattern.enabled }}</td>
+              <td>
+                <form method="post" action="{{ url_for('toggle_excluded_pattern_handler', pattern_id=pattern.id) }}">
+                  <button type="submit">{{ 'Disable' if pattern.enabled else 'Enable' }}</button>
+                </form>
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="5">No excluded patterns found.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </section>
+{% endblock %}

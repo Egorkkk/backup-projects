@@ -1,0 +1,26 @@
+html {
+  font-family: sans-serif;
+  line-height: 1.5;
+}
+
+body {
+  margin: 0;
+  background: #f7f7f5;
+  color: #1d1d1b;
+}
+
+main {
+  padding: 2rem;
+}
+
+.shell {
+  max-width: 42rem;
+}
+
+h1 {
+  margin: 0 0 0.5rem;
+}
+
+p {
+  margin: 0;
+}

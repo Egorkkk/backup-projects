@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Project Dirs{% endblock %}
+
+{% block content %}
+  <section class="shell">
+    <h1>Project Dirs</h1>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Id</th>
+          <th>Root id</th>
+          <th>Root name</th>
+          <th>Root path</th>
+          <th>Relative path</th>
+          <th>Name</th>
+          <th>Dir type</th>
+          <th>Status</th>
+          <th>Last seen at</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for project_dir in dirs_page.rows %}
+          <tr>
+            <td>{{ project_dir.id }}</td>
+            <td>{{ project_dir.root_id }}</td>
+            <td>{{ project_dir.root_name }}</td>
+            <td>{{ project_dir.root_path }}</td>
+            <td>{{ project_dir.relative_path }}</td>
+            <td>{{ project_dir.name }}</td>
+            <td>{{ project_dir.dir_type }}</td>
+            <td>{{ project_dir.status }}</td>
+            <td>{{ project_dir.last_seen_at }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="9">No project dirs found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Roots{% endblock %}
+
+{% block content %}
+  <section class="shell">
+    <h1>Roots</h1>
+
+    <form method="get">
+      <label for="status">Status</label>
+      <select id="status" name="status">
+        <option value="all" {% if roots_page.filters.status == "all" %}selected{% endif %}>All</option>
+        <option value="active" {% if roots_page.filters.status == "active" %}selected{% endif %}>Active</option>
+        <option value="missing" {% if roots_page.filters.status == "missing" %}selected{% endif %}>Missing</option>
+      </select>
+
+      <label for="rescan">Rescan</label>
+      <select id="rescan" name="rescan">
+        <option value="all" {% if roots_page.filters.rescan == "all" %}selected{% endif %}>All</option>
+        <option value="needs_rescan" {% if roots_page.filters.rescan == "needs_rescan" %}selected{% endif %}>Needs rescan</option>
+        <option value="no_rescan" {% if roots_page.filters.rescan == "no_rescan" %}selected{% endif %}>No rescan</option>
+      </select>
+
+      <button type="submit">Apply filters</button>
+    </form>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Id</th>
+          <th>RAID</th>
+          <th>Name</th>
+          <th>Path</th>
+          <th>Status</th>
+          <th>Needs structural rescan</th>
+          <th>Last seen at</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for root in roots_page.rows %}
+          <tr>
+            <td>{{ root.id }}</td>
+            <td>{{ root.raid_name }}</td>
+            <td>{{ root.name }}</td>
+            <td>{{ root.path }}</td>
+            <td>{{ root.status }}</td>
+            <td>{{ "yes" if root.needs_structural_rescan else "no" }}</td>
+            <td>{{ root.last_seen_at }}</td>
+            <td><button type="button" disabled>Rescan</button></td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="8">No roots found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+{% endblock %}

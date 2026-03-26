@@ -457,37 +457,37 @@
 - [x] Проверить все job-команды end-to-end
 
 ## 13.5. Тесты
-- [ ] Integration test daily job full flow
-- [ ] Integration test weekly job flow
+- [x] Integration test daily job full flow
+- [x] Integration test weekly job flow
 
 ---
 
 # 14. Flask Web UI
 
 ## 14.1. Flask app skeleton
-- [ ] Реализовать `web/app.py`
-- [ ] Подключить Jinja templates
-- [ ] Подключить static css/js
-- [ ] Добавить base layout
+- [x] Реализовать `web/app.py`
+- [x] Подключить Jinja templates
+- [x] Подключить static css/js
+- [x] Добавить base layout
 
 ## 14.2. Dashboard
-- [ ] Реализовать `routes_dashboard.py`
-- [ ] Показать last scan
-- [ ] Показать last backup
-- [ ] Показать run status
-- [ ] Показать counts
-- [ ] Показать skipped oversized summary
+- [x] Реализовать `routes_dashboard.py`
+- [x] Показать last scan
+- [x] Показать last backup
+- [x] Показать run status
+- [x] Показать counts
+- [x] Показать skipped oversized summary
 
 ## 14.3. Roots page
-- [ ] Реализовать `routes_roots.py`
-- [ ] Таблица roots
-- [ ] Фильтры
-- [ ] Кнопка rescan root
+- [x] Реализовать `routes_roots.py`
+- [x] Таблица roots
+- [x] Фильтры
+- [x] Кнопка rescan root
 
 ## 14.4. Project dirs page
-- [ ] Реализовать `routes_dirs.py`
-- [ ] Таблица project_dirs
-- [ ] Связка с root
+- [x] Реализовать `routes_dirs.py`
+- [x] Таблица project_dirs
+- [x] Связка с root
 
 ## 14.5. Rules page
 - [ ] Реализовать `routes_rules.py`
