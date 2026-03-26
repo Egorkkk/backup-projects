@@ -443,18 +443,18 @@
   - [x] finish run
 
 ## 13.2. Weekly job
-- [ ] Реализовать `weekly_job.py`
-- [ ] Full structural rescan all active roots
-- [ ] Report only / maintenance summary
-- [ ] Без реального restore verify
+- [x] Реализовать `weekly_job.py`
+- [x] Full structural rescan all active roots
+- [x] Report only / maintenance summary
+- [x] Без реального restore verify
 
 ## 13.3. Scan / backup jobs
-- [ ] Реализовать `scan_job.py`
-- [ ] Реализовать `backup_job.py`
-- [ ] Реализовать `verify_job.py` placeholder
+- [x] Реализовать `scan_job.py`
+- [x] Реализовать `backup_job.py`
+- [x] Реализовать `verify_job.py` placeholder
 
 ## 13.4. CLI
-- [ ] Проверить все job-команды end-to-end
+- [x] Проверить все job-команды end-to-end
 
 ## 13.5. Тесты
 - [ ] Integration test daily job full flow

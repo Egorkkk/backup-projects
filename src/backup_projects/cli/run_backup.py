@@ -10,16 +10,16 @@ from backup_projects.adapters.db.session import (
     session_scope,
 )
 from backup_projects.config import ConfigError, load_config
-from backup_projects.jobs.daily_job import (
-    DailyJobFinishedResult,
-    DailyJobLockedResult,
-    run_daily_job,
+from backup_projects.jobs.backup_job import (
+    BackupJobFinishedResult,
+    BackupJobLockedResult,
+    run_backup_job,
 )
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Run the daily backup pipeline for all active roots."
+        description="Run the backup pipeline for all active roots."
     )
     parser.add_argument("--config", required=True)
     parser.add_argument("--rules-config", default="config/rules.yaml")
@@ -44,7 +44,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         session_factory = create_session_factory(engine)
 
         with session_scope(session_factory) as session:
-            result = run_daily_job(
+            result = run_backup_job(
                 session=session,
                 config=config,
             )
@@ -56,7 +56,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if engine is not None:
             engine.dispose()
 
-    if isinstance(result, DailyJobLockedResult):
+    if isinstance(result, BackupJobLockedResult):
         _print_locked_run(result)
         return 0
 
@@ -64,19 +64,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     return 0 if result.run.status == "completed" else 1
 
 
-def _print_finished_result(result: DailyJobFinishedResult) -> None:
-    for target in result.targets:
-        if target.status == "completed":
-            _print_root_success(
-                root_id=target.root_id,
-                root_path=target.root_path,
-                manifest_result=target.manifest_result,
-                snapshot_id=target.backup_result.restic_result.snapshot_id,
-            )
+def _print_finished_result(result: BackupJobFinishedResult) -> None:
+    for root in result.roots:
+        if root.status == "completed":
+            _print_root_success(root)
             continue
 
-        if target.error is not None:
-            print(target.error, file=sys.stderr)
+        if root.error is not None:
+            print(root.error, file=sys.stderr)
 
     _print_summary(
         roots_total=result.summary.targets_total,
@@ -85,19 +80,13 @@ def _print_finished_result(result: DailyJobFinishedResult) -> None:
     )
 
 
-def _print_root_success(
-    *,
-    root_id: int,
-    root_path: str,
-    manifest_result,
-    snapshot_id: str,
-) -> None:
-    print(f"Daily backup root-id: {root_id}")
-    print(f"root-path: {root_path}")
-    print(f"manifest-file: {manifest_result.manifest_file_path}")
-    print(f"json-manifest-file: {manifest_result.json_manifest_file_path}")
-    print(f"summary-file: {manifest_result.summary_file_path}")
-    print(f"snapshot-id: {snapshot_id}")
+def _print_root_success(root) -> None:
+    print(f"Backup root-id: {root.root_id}")
+    print(f"root-path: {root.root_path}")
+    print(f"manifest-file: {root.manifest_result.manifest_file_path}")
+    print(f"json-manifest-file: {root.manifest_result.json_manifest_file_path}")
+    print(f"summary-file: {root.manifest_result.summary_file_path}")
+    print(f"snapshot-id: {root.backup_result.restic_result.snapshot_id}")
     print()
 
 
@@ -107,14 +96,14 @@ def _print_summary(
     roots_succeeded: int,
     roots_failed: int,
 ) -> None:
-    print("Daily run summary")
+    print("Backup run summary")
     print(f"roots-total: {roots_total}")
     print(f"roots-succeeded: {roots_succeeded}")
     print(f"roots-failed: {roots_failed}")
 
 
-def _print_locked_run(lock_result: DailyJobLockedResult) -> None:
-    print(f"Daily run locked for run-id: {lock_result.run.id}")
+def _print_locked_run(lock_result: BackupJobLockedResult) -> None:
+    print(f"Backup run locked for run-id: {lock_result.run.id}")
     print(f"lock-file: {lock_result.lock_path}")
 
 
