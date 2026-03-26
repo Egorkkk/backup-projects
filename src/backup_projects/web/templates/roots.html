@@ -47,7 +47,19 @@
             <td>{{ root.status }}</td>
             <td>{{ "yes" if root.needs_structural_rescan else "no" }}</td>
             <td>{{ root.last_seen_at }}</td>
-            <td><button type="button" disabled>Rescan</button></td>
+            <td>
+              {% if root.status == "active" %}
+                <form method="post" action="{{ url_for('dry_run_root_action', root_id=root.id) }}">
+                  <button type="submit">Dry-run now</button>
+                </form>
+                <form method="post" action="{{ url_for('rescan_root_action', root_id=root.id) }}">
+                  <button type="submit">Rescan root</button>
+                </form>
+              {% else %}
+                <button type="button" disabled>Dry-run now</button>
+                <button type="button" disabled>Rescan root</button>
+              {% endif %}
+            </td>
           </tr>
         {% else %}
           <tr>

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Manual Override Files{% endblock %}
+
+{% block content %}
+  <section class="shell">
+    <h1>Manual Override Files</h1>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Root id</th>
+          <th>Root path</th>
+          <th>File path</th>
+          <th>Extension</th>
+          <th>Size bytes</th>
+          <th>Reason</th>
+          <th>Manual include</th>
+          <th>Force include</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in review_page.rows %}
+          <tr>
+            <td>{{ row.root_id }}</td>
+            <td>{{ row.root_path }}</td>
+            <td>{{ row.file_path }}</td>
+            <td>{{ row.extension }}</td>
+            <td>{{ row.size_bytes }}</td>
+            <td>{{ row.reason }}</td>
+            <td>{{ "yes" if row.manual_include_applied else "no" }}</td>
+            <td>{{ "yes" if row.force_include_applied else "no" }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="8">No manual override files found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+{% endblock %}

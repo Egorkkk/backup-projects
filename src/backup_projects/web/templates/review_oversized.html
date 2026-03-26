@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Oversized Skipped Files{% endblock %}
+
+{% block content %}
+  <section class="shell">
+    <h1>Oversized Skipped Files</h1>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Root id</th>
+          <th>Root path</th>
+          <th>File path</th>
+          <th>Extension</th>
+          <th>Size bytes</th>
+          <th>Oversize action</th>
+          <th>Warning</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in review_page.rows %}
+          <tr>
+            <td>{{ row.root_id }}</td>
+            <td>{{ row.root_path }}</td>
+            <td>{{ row.file_path }}</td>
+            <td>{{ row.extension }}</td>
+            <td>{{ row.size_bytes }}</td>
+            <td>{{ row.oversize_action }}</td>
+            <td>{{ row.warning or "-" }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="7">No oversized skipped files found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+{% endblock %}

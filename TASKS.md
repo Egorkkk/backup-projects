@@ -506,21 +506,21 @@
 - [x] Ссылка на export report
 
 ## 14.8. Actions
-- [ ] Реализовать `routes_actions.py`
-- [ ] `Run daily now`
-- [ ] `Dry-run now`
-- [ ] `Rescan root`
-- [ ] `Backup now`
+- [x] Реализовать `routes_actions.py`
+- [x] `Run daily now`
+- [x] `Dry-run now`
+- [x] `Rescan root`
+- [x] `Backup now`
 
 ## 14.9. Exceptions / review
-- [ ] Добавить страницу oversized skipped files
-- [ ] Добавить страницу unrecognized extensions
-- [ ] Добавить страницу manual override files
+- [x] Добавить страницу oversized skipped files
+- [x] Добавить страницу unrecognized extensions
+- [x] Добавить страницу manual override files
 
 ## 14.10. Тесты
-- [ ] Integration tests basic Flask routes
-- [ ] Template render tests
-- [ ] Action route tests with mocked jobs
+- [x] Integration tests basic Flask routes
+- [x] Template render tests
+- [x] Action route tests with mocked jobs
 
 ---
 

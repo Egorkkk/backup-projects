@@ -42,6 +42,11 @@ class RunLockDenied:
     lock_path: str
 
 
+@dataclass(frozen=True, slots=True)
+class RunLockUnavailable:
+    lock_path: str
+
+
 def build_run_lock_path(*, locks_dir: str | Path) -> Path:
     return Path(locks_dir) / "run.lock"
 
@@ -71,6 +76,24 @@ def try_acquire_run_lock(
 
     return AcquiredRunLock(
         run_id=run_id,
+        lock_path=str(lock_path),
+        _file_lock=file_lock,
+    )
+
+
+def try_acquire_run_lock_without_run(
+    *,
+    locks_dir: str | Path,
+) -> AcquiredRunLock | RunLockUnavailable:
+    lock_path = build_run_lock_path(locks_dir=locks_dir)
+
+    try:
+        file_lock = acquire_file_lock(lock_path)
+    except FileLockAlreadyHeldError:
+        return RunLockUnavailable(lock_path=str(lock_path))
+
+    return AcquiredRunLock(
+        run_id=0,
         lock_path=str(lock_path),
         _file_lock=file_lock,
     )

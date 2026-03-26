@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Action Result{% endblock %}
+
+{% block content %}
+  <section class="shell">
+    <h1>{{ result.action_name }}</h1>
+
+    <p>Status: {{ result.status }}</p>
+    <p>{{ result.message }}</p>
+
+    {% if result.fields %}
+      <dl>
+        {% for field in result.fields %}
+          <dt>{{ field.label }}</dt>
+          <dd>{{ field.value }}</dd>
+        {% endfor %}
+      </dl>
+    {% endif %}
+
+    {% if result.details_text %}
+      <pre>{{ result.details_text }}</pre>
+    {% endif %}
+
+    {% if result.back_href and result.back_label %}
+      <p><a href="{{ result.back_href }}">{{ result.back_label }}</a></p>
+    {% endif %}
+  </section>
+{% endblock %}

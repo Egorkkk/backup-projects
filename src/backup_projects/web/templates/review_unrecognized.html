@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Unrecognized Extensions{% endblock %}
+
+{% block content %}
+  <section class="shell">
+    <h1>Unrecognized Extensions</h1>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Extension</th>
+          <th>Occurrence count</th>
+          <th>Sample path</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in review_page.rows %}
+          <tr>
+            <td>{{ row.extension }}</td>
+            <td>{{ row.occurrence_count }}</td>
+            <td>{{ row.sample_path }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="3">No unrecognized extensions found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+{% endblock %}

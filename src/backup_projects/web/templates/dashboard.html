@@ -11,6 +11,16 @@
     <h1>Dashboard</h1>
 
     <section>
+      <h2>Actions</h2>
+      <form method="post" action="{{ url_for('run_daily_action') }}">
+        <button type="submit">Run daily now</button>
+      </form>
+      <form method="post" action="{{ url_for('run_backup_action') }}">
+        <button type="submit">Backup now</button>
+      </form>
+    </section>
+
+    <section>
       <h2>Last scan</h2>
       <dl>
         <dt>Run id</dt>

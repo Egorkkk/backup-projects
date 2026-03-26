@@ -112,12 +112,13 @@ def run_daily_job(
     *,
     session: Session,
     config: ProjectConfig,
+    trigger_mode: str | None = None,
     now: Callable[[], datetime] | None = None,
 ) -> DailyJobFinishedResult | DailyJobLockedResult:
     run = start_run(
         session=session,
         run_type="daily",
-        trigger_mode=config.app_config.scheduler.mode,
+        trigger_mode=trigger_mode or config.app_config.scheduler.mode,
         now=now,
     )
     try:
