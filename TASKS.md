@@ -490,20 +490,20 @@
 - [x] Связка с root
 
 ## 14.5. Rules page
-- [ ] Реализовать `routes_rules.py`
-- [ ] CRUD extension rules
-- [ ] CRUD excludes
-- [ ] Показ default `.aaf` = 100MB
+- [x] Реализовать `routes_rules.py`
+- [x] CRUD extension rules
+- [x] CRUD excludes
+- [x] Показ default `.aaf` = 100MB
 
 ## 14.6. Includes page
-- [ ] Реализовать `routes_includes.py`
-- [ ] CRUD manual includes
+- [x] Реализовать `routes_includes.py`
+- [x] CRUD manual includes
 
 ## 14.7. Runs page
-- [ ] Реализовать `routes_runs.py`
-- [ ] История запусков
-- [ ] Просмотр run details
-- [ ] Ссылка на export report
+- [x] Реализовать `routes_runs.py`
+- [x] История запусков
+- [x] Просмотр run details
+- [x] Ссылка на export report
 
 ## 14.8. Actions
 - [ ] Реализовать `routes_actions.py`

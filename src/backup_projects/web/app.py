@@ -8,7 +8,9 @@ from backup_projects.adapters.db.session import create_engine_from_config, creat
 from backup_projects.config import ProjectConfig, load_config
 from backup_projects.web.routes_dashboard import register_dashboard_routes
 from backup_projects.web.routes_dirs import register_dirs_routes
+from backup_projects.web.routes_includes import register_includes_routes
 from backup_projects.web.routes_roots import register_roots_routes
+from backup_projects.web.routes_runs import register_runs_routes
 from backup_projects.web.routes_rules import register_rules_routes
 
 
@@ -43,6 +45,15 @@ def create_app(
     )
     register_rules_routes(
         app,
+        session_factory=session_factory,
+    )
+    register_includes_routes(
+        app,
+        session_factory=session_factory,
+    )
+    register_runs_routes(
+        app,
+        config=project_config,
         session_factory=session_factory,
     )
 

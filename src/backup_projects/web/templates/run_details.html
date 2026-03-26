@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Run Details{% endblock %}
+
+{% block content %}
+  <section class="shell">
+    <h1>Run Details</h1>
+
+    <section>
+      <dl>
+        <dt>Id</dt>
+        <dd>{{ run_details.id }}</dd>
+        <dt>Run type</dt>
+        <dd>{{ run_details.run_type }}</dd>
+        <dt>Status</dt>
+        <dd>{{ run_details.status }}</dd>
+        <dt>Trigger mode</dt>
+        <dd>{{ run_details.trigger_mode }}</dd>
+        <dt>Started at</dt>
+        <dd>{{ run_details.started_at }}</dd>
+        <dt>Finished at</dt>
+        <dd>{{ run_details.finished_at or "-" }}</dd>
+      </dl>
+    </section>
+
+    <section>
+      <h2>Events</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Event time</th>
+            <th>Level</th>
+            <th>Event type</th>
+            <th>Message</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for event in run_details.events %}
+            <tr>
+              <td>{{ event.event_time }}</td>
+              <td>{{ event.level }}</td>
+              <td>{{ event.event_type }}</td>
+              <td>{{ event.message }}</td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="4">No events found.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Artifacts</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Artifact</th>
+            <th>Exists</th>
+            <th>Path</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for artifact in run_details.artifacts %}
+            <tr>
+              <td>{{ artifact.label }}</td>
+              <td>{{ "yes" if artifact.exists else "no" }}</td>
+              <td>{{ artifact.path }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p>Export report is not wired yet.</p>
+    </section>
+  </section>
+{% endblock %}

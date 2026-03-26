@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Runs{% endblock %}
+
+{% block content %}
+  <section class="shell">
+    <h1>Runs</h1>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Id</th>
+          <th>Run type</th>
+          <th>Status</th>
+          <th>Trigger mode</th>
+          <th>Started at</th>
+          <th>Finished at</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for run in runs_page.rows %}
+          <tr>
+            <td>{{ run.id }}</td>
+            <td>{{ run.run_type }}</td>
+            <td>{{ run.status }}</td>
+            <td>{{ run.trigger_mode }}</td>
+            <td>{{ run.started_at }}</td>
+            <td>{{ run.finished_at or "-" }}</td>
+            <td><a href="{{ url_for('run_details', run_id=run.id) }}">View details</a></td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="7">No runs found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+{% endblock %}

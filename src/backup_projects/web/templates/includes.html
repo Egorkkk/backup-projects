@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Includes{% endblock %}
+
+{% block content %}
+  <section class="shell">
+    <h1>Includes</h1>
+
+    {% if error_message %}
+      <section>
+        <p>{{ error_message }}</p>
+      </section>
+    {% endif %}
+
+    <section>
+      <h2>Create include</h2>
+
+      <form method="post" action="{{ url_for('create_include_handler') }}">
+        <label for="root_id">Root</label>
+        <select id="root_id" name="root_id">
+          {% for root in includes_page.available_roots %}
+            <option value="{{ root.id }}">{{ root.id }} - {{ root.name }}</option>
+          {% endfor %}
+        </select>
+
+        <label for="target_path">Target path</label>
+        <input id="target_path" name="target_path" type="text" required>
+
+        <label for="include_path_type">Include path type</label>
+        <select id="include_path_type" name="include_path_type">
+          <option value="file">file</option>
+          <option value="directory">directory</option>
+        </select>
+
+        <label for="recursive">Recursive</label>
+        <select id="recursive" name="recursive">
+          <option value="false">false</option>
+          <option value="true">true</option>
+        </select>
+
+        <label for="force_include">Force include</label>
+        <select id="force_include" name="force_include">
+          <option value="false">false</option>
+          <option value="true">true</option>
+        </select>
+
+        <label for="enabled">Enabled</label>
+        <select id="enabled" name="enabled">
+          <option value="true">true</option>
+          <option value="false">false</option>
+        </select>
+
+        <button type="submit">Create include</button>
+      </form>
+    </section>
+
+    <section>
+      <h2>Manual includes</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Id</th>
+            <th>Root id</th>
+            <th>Root name</th>
+            <th>Relative path</th>
+            <th>Include path type</th>
+            <th>Recursive</th>
+            <th>Force include</th>
+            <th>Enabled</th>
+            <th>Updated at</th>
+            <th>Toggle enabled</th>
+            <th>Delete</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for include in includes_page.rows %}
+            <tr>
+              <td>{{ include.id }}</td>
+              <td>{{ include.root_id }}</td>
+              <td>{{ include.root_name }}</td>
+              <td>{{ include.relative_path }}</td>
+              <td>{{ include.include_path_type }}</td>
+              <td>{{ include.recursive }}</td>
+              <td>{{ include.force_include }}</td>
+              <td>{{ include.enabled }}</td>
+              <td>{{ include.updated_at }}</td>
+              <td>
+                <form method="post" action="{{ url_for('toggle_include_handler', include_id=include.id) }}">
+                  <button type="submit">{{ 'Disable' if include.enabled else 'Enable' }}</button>
+                </form>
+              </td>
+              <td>
+                <form method="post" action="{{ url_for('delete_include_handler', include_id=include.id) }}">
+                  <button type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="11">No manual includes found.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </section>
+{% endblock %}
