@@ -17,6 +17,24 @@ from backup_projects.services.dry_run_service import build_root_dry_run_manifest
 from backup_projects.services.manifest_builder import write_manifest
 
 
+def register(subparsers) -> None:
+    parser = subparsers.add_parser(
+        "dry-run",
+        description=(
+            "Simulate policy selection from the current inventory without running "
+            "backup."
+        ),
+    )
+    parser.add_argument("--config", required=True)
+    parser.add_argument("--rules-config", default="config/rules.yaml")
+    root_group = parser.add_mutually_exclusive_group(required=True)
+    root_group.add_argument("--root-id", type=int)
+    root_group.add_argument("--root-path")
+    parser.add_argument("--output-dir", type=Path)
+    parser.add_argument("--artifact-stem")
+    parser.set_defaults(_handler=handle)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
@@ -34,13 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = build_parser()
-    try:
-        args = parser.parse_args(argv)
-    except SystemExit as exc:
-        return int(exc.code)
-
+def handle(args: argparse.Namespace) -> int:
     try:
         _validate_persistence_args(
             output_dir=args.output_dir,
@@ -93,6 +105,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             engine.dispose()
 
     return 0
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = build_parser()
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    return handle(args)
 
 
 def _resolve_target_root(*, session, root_id: int | None, root_path: str | None):

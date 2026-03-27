@@ -28,6 +28,69 @@ _SUPPORTED_EXCLUDE_PATTERN_TYPES = (
 )
 
 
+def register(subparsers) -> None:
+    parser = subparsers.add_parser(
+        "rules",
+        description="List and mutate policy rules in SQLite.",
+    )
+    parser.add_argument("--config", required=True)
+    parser.add_argument("--rules-config", default="config/rules.yaml")
+    nested_subparsers = parser.add_subparsers(dest="command", required=True)
+
+    nested_subparsers.add_parser(
+        "list",
+        description="List extension rules and excluded patterns.",
+    )
+
+    add_extension_parser = nested_subparsers.add_parser(
+        "add-extension",
+        description="Create one extension rule row in SQLite.",
+    )
+    add_extension_parser.add_argument("extension")
+    add_extension_parser.add_argument(
+        "--oversize-action",
+        required=True,
+        choices=[action.value for action in OversizeAction],
+    )
+    add_extension_parser.add_argument("--max-size-bytes", type=int)
+    add_extension_parser.add_argument("--disabled", action="store_true")
+
+    update_extension_parser = nested_subparsers.add_parser(
+        "update-extension",
+        description="Update one extension rule row in SQLite.",
+    )
+    update_extension_parser.add_argument("extension")
+    update_extension_parser.add_argument(
+        "--oversize-action",
+        choices=[action.value for action in OversizeAction],
+    )
+    max_size_group = update_extension_parser.add_mutually_exclusive_group()
+    max_size_group.add_argument("--max-size-bytes", type=int)
+    max_size_group.add_argument("--clear-max-size", action="store_true")
+    enabled_group = update_extension_parser.add_mutually_exclusive_group()
+    enabled_group.add_argument("--enabled", action="store_true")
+    enabled_group.add_argument("--disabled", action="store_true")
+
+    add_exclude_parser = nested_subparsers.add_parser(
+        "add-exclude",
+        description="Create one excluded pattern row in SQLite.",
+    )
+    add_exclude_parser.add_argument(
+        "--pattern-type",
+        required=True,
+        choices=_SUPPORTED_EXCLUDE_PATTERN_TYPES,
+    )
+    add_exclude_parser.add_argument("pattern_value")
+    add_exclude_parser.add_argument("--disabled", action="store_true")
+
+    disable_exclude_parser = nested_subparsers.add_parser(
+        "disable-exclude",
+        description="Disable one excluded pattern row in SQLite.",
+    )
+    disable_exclude_parser.add_argument("exclude_id", type=int)
+    parser.set_defaults(_handler=handle)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="List and mutate policy rules in SQLite."
@@ -91,13 +154,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = build_parser()
-    try:
-        args = parser.parse_args(argv)
-    except SystemExit as exc:
-        return int(exc.code)
-
+def handle(args: argparse.Namespace) -> int:
     try:
         config = load_config(app_path=args.config, rules_path=args.rules_config)
         engine = create_engine_from_config(config)
@@ -163,6 +220,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             engine.dispose()
 
     return 0
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = build_parser()
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    return handle(args)
 
 
 def _update_extension_rule(*, repo: RulesRepository, args) -> ExtensionRuleRecord:

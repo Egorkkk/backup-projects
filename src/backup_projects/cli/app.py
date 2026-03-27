@@ -4,7 +4,12 @@ import argparse
 from collections.abc import Sequence
 
 from backup_projects.cli import (
+    backup,
+    dry_run,
     init_db,
+    rules,
+    run_daily,
+    run_weekly,
     scan_manual,
     scan_project_dirs,
     scan_roots,
@@ -44,3 +49,8 @@ def _register_commands(subparsers) -> None:
     scan_structure.register(subparsers)
     scan_project_dirs.register(subparsers)
     scan_manual.register(subparsers)
+    run_daily.register(subparsers)
+    run_weekly.register(subparsers)
+    backup.register(subparsers)
+    dry_run.register(subparsers)
+    rules.register(subparsers)

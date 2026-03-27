@@ -17,6 +17,16 @@ from backup_projects.jobs.daily_job import (
 )
 
 
+def register(subparsers) -> None:
+    parser = subparsers.add_parser(
+        "run-daily",
+        description="Run the daily backup pipeline for all active roots.",
+    )
+    parser.add_argument("--config", required=True)
+    parser.add_argument("--rules-config", default="config/rules.yaml")
+    parser.set_defaults(_handler=handle)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Run the daily backup pipeline for all active roots."
@@ -26,13 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = build_parser()
-    try:
-        args = parser.parse_args(argv)
-    except SystemExit as exc:
-        return int(exc.code)
-
+def handle(args: argparse.Namespace) -> int:
     try:
         config = load_config(app_path=args.config, rules_path=args.rules_config)
     except ConfigError as exc:
@@ -62,6 +66,15 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     _print_finished_result(result)
     return 0 if result.run.status == "completed" else 1
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = build_parser()
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    return handle(args)
 
 
 def _print_finished_result(result: DailyJobFinishedResult) -> None:

@@ -541,17 +541,17 @@
 - [x] `scan-manual`
 
 ## 15.4. Job commands
-- [ ] `run-daily`
-- [ ] `run-weekly`
-- [ ] `backup`
-- [ ] `dry-run`
+- [x] `run-daily`
+- [x] `run-weekly`
+- [x] `backup`
+- [x] `dry-run`
 
 ## 15.5. Rules commands
-- [ ] `rules list`
-- [ ] `rules add-extension`
-- [ ] `rules update-extension`
-- [ ] `rules add-exclude`
-- [ ] `rules disable-exclude`
+- [x] `rules list`
+- [x] `rules add-extension`
+- [x] `rules update-extension`
+- [x] `rules add-exclude`
+- [x] `rules disable-exclude`
 
 ## 15.6. Includes commands
 - [ ] `include add-file`

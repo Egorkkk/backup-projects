@@ -23,6 +23,21 @@ from backup_projects.services.run_lock import RunLockDenied, try_acquire_run_loc
 from backup_projects.services.run_service import finish_run, start_run
 
 
+def register(subparsers) -> None:
+    parser = subparsers.add_parser(
+        "backup",
+        description="Build manifest artifacts and run backup for a root.",
+    )
+    parser.add_argument("--config", required=True)
+    parser.add_argument("--rules-config", default="config/rules.yaml")
+    root_group = parser.add_mutually_exclusive_group(required=True)
+    root_group.add_argument("--root-id", type=int)
+    root_group.add_argument("--root-path")
+    parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--artifact-stem", required=True)
+    parser.set_defaults(_handler=handle)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Build manifest artifacts and run backup for a root."
@@ -37,13 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = build_parser()
-    try:
-        args = parser.parse_args(argv)
-    except SystemExit as exc:
-        return int(exc.code)
-
+def handle(args: argparse.Namespace) -> int:
     try:
         _validate_args(artifact_stem=args.artifact_stem)
     except ValueError as exc:
@@ -134,6 +143,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             engine.dispose()
 
     return 0
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = build_parser()
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    return handle(args)
 
 
 def _resolve_locks_dir(config) -> Path:
