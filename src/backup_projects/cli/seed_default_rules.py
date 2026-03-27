@@ -4,14 +4,14 @@ import argparse
 import sys
 from collections.abc import Sequence
 
-from backup_projects.adapters.db.bootstrap import initialize_database_schema
+from backup_projects.adapters.db.bootstrap import seed_default_rules
 from backup_projects.config import ConfigError, load_config
 
 
 def register(subparsers) -> None:
     parser = subparsers.add_parser(
-        "init-db",
-        description="Initialize SQLite schema.",
+        "seed-default-rules",
+        description="Seed default settings and policy rules.",
     )
     parser.add_argument("--app-config", default="config/app.yaml")
     parser.add_argument("--rules-config", default="config/rules.yaml")
@@ -19,7 +19,9 @@ def register(subparsers) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Initialize SQLite schema.")
+    parser = argparse.ArgumentParser(
+        description="Seed default settings and policy rules."
+    )
     parser.add_argument("--app-config", default="config/app.yaml")
     parser.add_argument("--rules-config", default="config/rules.yaml")
     return parser
@@ -28,7 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
 def handle(args: argparse.Namespace) -> int:
     try:
         config = load_config(app_path=args.app_config, rules_path=args.rules_config)
-        initialize_database_schema(config)
+        seed_default_rules(config)
     except ConfigError as exc:
         print(str(exc), file=sys.stderr)
         return 2
@@ -36,7 +38,7 @@ def handle(args: argparse.Namespace) -> int:
         print(str(exc), file=sys.stderr)
         return 1
 
-    print("Database schema initialized.")
+    print("Default settings and rules seeded.")
     return 0
 
 

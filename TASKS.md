@@ -527,12 +527,12 @@
 # 15. CLI
 
 ## 15.1. App skeleton
-- [ ] Реализовать `cli/app.py`
-- [ ] Разбить команды по файлам
+- [x] Реализовать `cli/app.py`
+- [x] Разбить команды по файлам
 
 ## 15.2. Init commands
-- [ ] `init-db`
-- [ ] `seed-default-rules`
+- [x] `init-db`
+- [x] `seed-default-rules`
 
 ## 15.3. Scan commands
 - [ ] `scan-roots`

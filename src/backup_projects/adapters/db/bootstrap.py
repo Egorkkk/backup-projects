@@ -18,10 +18,21 @@ from backup_projects.constants import AAF_EXTENSION
 
 
 def initialize_database(config: ProjectConfig) -> None:
+    initialize_database_schema(config)
+    seed_default_rules(config)
+
+
+def initialize_database_schema(config: ProjectConfig) -> None:
     engine = create_engine_from_config(config)
     try:
         create_schema(engine)
+    finally:
+        engine.dispose()
 
+
+def seed_default_rules(config: ProjectConfig) -> None:
+    engine = create_engine_from_config(config)
+    try:
         now_iso = _utcnow_iso()
         with engine.begin() as connection:
             seed_settings(connection, config, now_iso=now_iso)
