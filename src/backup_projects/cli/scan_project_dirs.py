@@ -19,6 +19,19 @@ from backup_projects.services.project_dir_scan_service import (
 )
 
 
+def register(subparsers) -> None:
+    parser = subparsers.add_parser(
+        "scan-project-dirs",
+        description="Run incremental scan for known project dirs and sync results to SQLite.",
+    )
+    parser.add_argument("--config", required=True)
+    parser.add_argument("--rules-config", default="config/rules.yaml")
+    target_group = parser.add_mutually_exclusive_group(required=True)
+    target_group.add_argument("--project-dir-id", type=int)
+    target_group.add_argument("--root-id", type=int)
+    parser.set_defaults(_handler=handle)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Run incremental scan for known project dirs and sync results to SQLite."
@@ -31,13 +44,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = build_parser()
-    try:
-        args = parser.parse_args(argv)
-    except SystemExit as exc:
-        return int(exc.code)
-
+def handle(args: argparse.Namespace) -> int:
     try:
         config = load_config(app_path=args.config, rules_path=args.rules_config)
         engine = create_engine_from_config(config)
@@ -79,6 +86,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             engine.dispose()
 
     return 0
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = build_parser()
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    return handle(args)
 
 
 def _resolve_target_project_dirs(*, session, project_dir_id: int | None, root_id: int | None):

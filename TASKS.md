@@ -535,10 +535,10 @@
 - [x] `seed-default-rules`
 
 ## 15.3. Scan commands
-- [ ] `scan-roots`
-- [ ] `scan-structure`
-- [ ] `scan-project-dirs`
-- [ ] `scan-manual`
+- [x] `scan-roots`
+- [x] `scan-structure`
+- [x] `scan-project-dirs`
+- [x] `scan-manual`
 
 ## 15.4. Job commands
 - [ ] `run-daily`

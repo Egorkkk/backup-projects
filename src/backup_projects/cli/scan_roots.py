@@ -17,6 +17,16 @@ from backup_projects.services.root_discovery_service import (
 )
 
 
+def register(subparsers) -> None:
+    parser = subparsers.add_parser(
+        "scan-roots",
+        description="Discover configured RAID roots and sync them to SQLite.",
+    )
+    parser.add_argument("--config", required=True)
+    parser.add_argument("--rules-config", default="config/rules.yaml")
+    parser.set_defaults(_handler=handle)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Discover configured RAID roots and sync them to SQLite."
@@ -26,13 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = build_parser()
-    try:
-        args = parser.parse_args(argv)
-    except SystemExit as exc:
-        return int(exc.code)
-
+def handle(args: argparse.Namespace) -> int:
     try:
         config = load_config(app_path=args.config, rules_path=args.rules_config)
         engine = create_engine_from_config(config)
@@ -67,6 +71,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             engine.dispose()
 
     return 0
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = build_parser()
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    return handle(args)
 
 
 def _print_summary(raid_name: str, raid_path: str, result: RootDiscoveryResult) -> None:

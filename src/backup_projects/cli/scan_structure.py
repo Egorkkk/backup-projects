@@ -20,6 +20,19 @@ from backup_projects.services.structural_scan_sync_service import (
 )
 
 
+def register(subparsers) -> None:
+    parser = subparsers.add_parser(
+        "scan-structure",
+        description="Run structural scan for one known root and sync results to SQLite.",
+    )
+    parser.add_argument("--config", required=True)
+    parser.add_argument("--rules-config", default="config/rules.yaml")
+    target_group = parser.add_mutually_exclusive_group(required=True)
+    target_group.add_argument("--root-id", type=int)
+    target_group.add_argument("--path")
+    parser.set_defaults(_handler=handle)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Run structural scan for one known root and sync results to SQLite."
@@ -32,13 +45,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = build_parser()
-    try:
-        args = parser.parse_args(argv)
-    except SystemExit as exc:
-        return int(exc.code)
-
+def handle(args: argparse.Namespace) -> int:
     try:
         config = load_config(app_path=args.config, rules_path=args.rules_config)
         engine = create_engine_from_config(config)
@@ -75,6 +82,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             engine.dispose()
 
     return 0
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = build_parser()
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    return handle(args)
 
 
 def _resolve_target_root(*, session, root_id: int | None, path: str | None):

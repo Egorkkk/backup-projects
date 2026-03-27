@@ -3,7 +3,14 @@ from __future__ import annotations
 import argparse
 from collections.abc import Sequence
 
-from backup_projects.cli import init_db, seed_default_rules
+from backup_projects.cli import (
+    init_db,
+    scan_manual,
+    scan_project_dirs,
+    scan_roots,
+    scan_structure,
+    seed_default_rules,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -33,3 +40,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 def _register_commands(subparsers) -> None:
     init_db.register(subparsers)
     seed_default_rules.register(subparsers)
+    scan_roots.register(subparsers)
+    scan_structure.register(subparsers)
+    scan_project_dirs.register(subparsers)
+    scan_manual.register(subparsers)
