@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from pathlib import Path
 from types import SimpleNamespace
 
 
@@ -162,3 +163,158 @@ def test_runs_show_missing_run_returns_predictable_failure(monkeypatch, capsys) 
     captured = capsys.readouterr()
     assert exit_code == 2
     assert "Run not found for id: 404" in captured.err
+
+
+def test_runs_export_happy_path_streams_html_report_to_stdout(
+    tmp_path: Path,
+    monkeypatch,
+    capsys,
+) -> None:
+    from backup_projects.cli import runs as runs_module
+    from backup_projects.services.run_service import RunLifecycleRecord
+    from backup_projects.services.run_visibility_service import ArtifactStatus, RunDetails
+
+    html_report_path = tmp_path / "runtime" / "reports" / "run-9" / "report.html"
+    html_report_path.parent.mkdir(parents=True, exist_ok=True)
+    html_report_path.write_text("<html>export</html>\n", encoding="utf-8")
+
+    fake_config = SimpleNamespace(
+        app_path=runs_module.Path("/tmp/config/app.yaml"),
+        app_config=SimpleNamespace(
+            runtime=SimpleNamespace(
+                reports_dir="runtime/reports",
+                logs_dir="runtime/logs",
+            )
+        ),
+    )
+
+    class FakeEngine:
+        def dispose(self) -> None:
+            return None
+
+    @contextmanager
+    def fake_session_scope(_session_factory):
+        yield "fake-session"
+
+    monkeypatch.setattr(runs_module, "load_config", lambda app_path, rules_path: fake_config)
+    monkeypatch.setattr(runs_module, "create_engine_from_config", lambda config: FakeEngine())
+    monkeypatch.setattr(runs_module, "create_session_factory", lambda engine: "fake-factory")
+    monkeypatch.setattr(runs_module, "session_scope", fake_session_scope)
+    monkeypatch.setattr(
+        runs_module,
+        "get_run_details",
+        lambda *, session, run_id, reports_dir, logs_dir: RunDetails(
+            run=RunLifecycleRecord(
+                id=9,
+                run_type="backup",
+                status="completed",
+                started_at="2026-03-17T10:00:00+00:00",
+                trigger_mode="manual",
+                finished_at="2026-03-17T10:04:00+00:00",
+            ),
+            events=(),
+            report_json=ArtifactStatus(path="/tmp/runtime/reports/run-9/report.json", exists=False),
+            report_text=ArtifactStatus(path="/tmp/runtime/reports/run-9/report.txt", exists=False),
+            report_html=ArtifactStatus(path=str(html_report_path), exists=True),
+            log_file=ArtifactStatus(path="/tmp/runtime/logs/run-9/run.log", exists=False),
+        ),
+    )
+
+    exit_code = runs_module.main(["--config", "config/app.yaml", "export", "--id", "9"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert captured.out == "<html>export</html>\n"
+    assert captured.err == ""
+
+
+def test_runs_export_missing_run_returns_predictable_failure(monkeypatch, capsys) -> None:
+    from backup_projects.cli import runs as runs_module
+
+    fake_config = SimpleNamespace(
+        app_path=runs_module.Path("/tmp/config/app.yaml"),
+        app_config=SimpleNamespace(
+            runtime=SimpleNamespace(
+                reports_dir="runtime/reports",
+                logs_dir="runtime/logs",
+            )
+        ),
+    )
+
+    class FakeEngine:
+        def dispose(self) -> None:
+            return None
+
+    @contextmanager
+    def fake_session_scope(_session_factory):
+        yield "fake-session"
+
+    monkeypatch.setattr(runs_module, "load_config", lambda app_path, rules_path: fake_config)
+    monkeypatch.setattr(runs_module, "create_engine_from_config", lambda config: FakeEngine())
+    monkeypatch.setattr(runs_module, "create_session_factory", lambda engine: "fake-factory")
+    monkeypatch.setattr(runs_module, "session_scope", fake_session_scope)
+    monkeypatch.setattr(
+        runs_module,
+        "get_run_details",
+        lambda **kwargs: (_ for _ in ()).throw(LookupError("Run not found for id: 404")),
+    )
+
+    exit_code = runs_module.main(["--config", "config/app.yaml", "export", "--id", "404"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 2
+    assert "Run not found for id: 404" in captured.err
+
+
+def test_runs_export_missing_html_report_returns_predictable_failure(monkeypatch, capsys) -> None:
+    from backup_projects.cli import runs as runs_module
+    from backup_projects.services.run_service import RunLifecycleRecord
+    from backup_projects.services.run_visibility_service import ArtifactStatus, RunDetails
+
+    fake_config = SimpleNamespace(
+        app_path=runs_module.Path("/tmp/config/app.yaml"),
+        app_config=SimpleNamespace(
+            runtime=SimpleNamespace(
+                reports_dir="runtime/reports",
+                logs_dir="runtime/logs",
+            )
+        ),
+    )
+
+    class FakeEngine:
+        def dispose(self) -> None:
+            return None
+
+    @contextmanager
+    def fake_session_scope(_session_factory):
+        yield "fake-session"
+
+    monkeypatch.setattr(runs_module, "load_config", lambda app_path, rules_path: fake_config)
+    monkeypatch.setattr(runs_module, "create_engine_from_config", lambda config: FakeEngine())
+    monkeypatch.setattr(runs_module, "create_session_factory", lambda engine: "fake-factory")
+    monkeypatch.setattr(runs_module, "session_scope", fake_session_scope)
+    monkeypatch.setattr(
+        runs_module,
+        "get_run_details",
+        lambda *, session, run_id, reports_dir, logs_dir: RunDetails(
+            run=RunLifecycleRecord(
+                id=8,
+                run_type="backup",
+                status="completed",
+                started_at="2026-03-17T10:00:00+00:00",
+                trigger_mode="manual",
+                finished_at="2026-03-17T10:04:00+00:00",
+            ),
+            events=(),
+            report_json=ArtifactStatus(path="/tmp/runtime/reports/run-8/report.json", exists=True),
+            report_text=ArtifactStatus(path="/tmp/runtime/reports/run-8/report.txt", exists=True),
+            report_html=ArtifactStatus(path="/tmp/runtime/reports/run-8/report.html", exists=False),
+            log_file=ArtifactStatus(path="/tmp/runtime/logs/run-8/run.log", exists=True),
+        ),
+    )
+
+    exit_code = runs_module.main(["--config", "config/app.yaml", "export", "--id", "8"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 2
+    assert "HTML report is missing for run id: 8" in captured.err

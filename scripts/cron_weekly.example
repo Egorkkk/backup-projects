@@ -1,0 +1,2 @@
+# Example weekly cron entry (current placeholder)
+0 3 * * 0 /home/egorkkk/projects/backup-projects/scripts/dev_run_cli.sh run-weekly --config config/app.yaml --rules-config config/rules.yaml

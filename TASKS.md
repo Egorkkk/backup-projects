@@ -577,29 +577,29 @@
 # 16. Экспорт отчётов
 
 ## 16.1. Форматы
-- [ ] JSON report
-- [ ] text report
-- [ ] HTML export
+- [x] JSON report
+- [x] text report
+- [x] HTML export
 
 ## 16.2. Web download
-- [ ] Добавить download link в Runs UI
+- [x] Добавить download link в Runs UI
 
 ## 16.3. CLI export
-- [ ] Добавить `runs export --id`
+- [x] Добавить `runs export --id`
 
 ---
 
 # 17. Cron integration
 
 ## 17.1. Скрипты
-- [ ] Создать `scripts/dev_run_cli.sh`
-- [ ] Создать `scripts/dev_run_web.sh`
-- [ ] Создать пример cron entry для daily run
-- [ ] Создать пример cron entry для weekly run
+- [x] Создать `scripts/dev_run_cli.sh`
+- [x] Создать `scripts/dev_run_web.sh`
+- [x] Создать пример cron entry для daily run
+- [x] Создать пример cron entry для weekly run
 
 ## 17.2. Документация
-- [ ] Описать cron setup в `deployment.md`
-- [ ] Описать возможный переход на systemd позже
+- [x] Описать cron setup в `deployment.md`
+- [x] Описать возможный переход на systemd позже
 
 ---
 

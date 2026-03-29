@@ -1,0 +1,2 @@
+# Example daily cron entry
+0 2 * * * /home/egorkkk/projects/backup-projects/scripts/dev_run_cli.sh run-daily --config config/app.yaml --rules-config config/rules.yaml

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
@@ -231,6 +232,7 @@ def _dashboard_view():
                 ),
                 artifacts=(
                     SimpleNamespace(
+                        key="json",
                         label="report json",
                         exists=True,
                         path="/tmp/report.json",
@@ -307,3 +309,83 @@ def test_basic_get_routes_render_expected_page_identity(
 
     assert response.status_code == 200
     assert expected_text in response.get_data(as_text=True)
+
+
+def test_runs_report_download_returns_attachment_for_existing_report_artifact(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app = _build_test_app(tmp_path)
+    report_path = tmp_path / "runtime" / "reports" / "run-7" / "report.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text('{"status":"ok"}\n', encoding="utf-8")
+    monkeypatch.setattr(
+        "backup_projects.web.routes_runs.build_run_details_view",
+        lambda **kwargs: SimpleNamespace(
+            id=7,
+            artifacts=(
+                SimpleNamespace(key="json", label="report json", exists=True, path=str(report_path)),
+            ),
+        ),
+    )
+
+    response = app.test_client().get("/runs/7/reports/json")
+
+    assert response.status_code == 200
+    assert response.headers["Content-Disposition"].startswith("attachment;")
+    assert response.get_data(as_text=True) == '{"status":"ok"}\n'
+
+
+def test_runs_report_download_returns_404_for_invalid_artifact_key(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app = _build_test_app(tmp_path)
+    mocked_view = Mock()
+    monkeypatch.setattr("backup_projects.web.routes_runs.build_run_details_view", mocked_view)
+
+    response = app.test_client().get("/runs/7/reports/log")
+
+    assert response.status_code == 404
+    mocked_view.assert_not_called()
+
+
+def test_runs_report_download_returns_404_when_report_file_is_missing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app = _build_test_app(tmp_path)
+    missing_path = tmp_path / "runtime" / "reports" / "run-7" / "report.html"
+    monkeypatch.setattr(
+        "backup_projects.web.routes_runs.build_run_details_view",
+        lambda **kwargs: SimpleNamespace(
+            id=7,
+            artifacts=(
+                SimpleNamespace(
+                    key="html",
+                    label="report html",
+                    exists=False,
+                    path=str(missing_path),
+                ),
+            ),
+        ),
+    )
+
+    response = app.test_client().get("/runs/7/reports/html")
+
+    assert response.status_code == 404
+
+
+def test_runs_report_download_returns_404_for_unknown_run(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app = _build_test_app(tmp_path)
+    monkeypatch.setattr(
+        "backup_projects.web.routes_runs.build_run_details_view",
+        lambda **kwargs: (_ for _ in ()).throw(LookupError("Run not found for id: 999")),
+    )
+
+    response = app.test_client().get("/runs/999/reports/json")
+
+    assert response.status_code == 404

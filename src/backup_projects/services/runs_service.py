@@ -34,6 +34,7 @@ class RunEventRow:
 
 @dataclass(frozen=True, slots=True)
 class RunArtifactRow:
+    key: str
     label: str
     path: str
     exists: bool
@@ -99,21 +100,25 @@ def build_run_details_view(
         ),
         artifacts=(
             RunArtifactRow(
+                key="json",
                 label="report json",
                 path=details.report_json.path,
                 exists=details.report_json.exists,
             ),
             RunArtifactRow(
+                key="text",
                 label="report text",
                 path=details.report_text.path,
                 exists=details.report_text.exists,
             ),
             RunArtifactRow(
+                key="html",
                 label="report html",
                 path=details.report_html.path,
                 exists=details.report_html.exists,
             ),
             RunArtifactRow(
+                key="log",
                 label="log file",
                 path=details.log_file.path,
                 exists=details.log_file.exists,

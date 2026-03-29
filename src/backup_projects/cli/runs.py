@@ -29,6 +29,9 @@ def register(subparsers) -> None:
 
     show_parser = nested_subparsers.add_parser("show", description="Show one run in detail.")
     show_parser.add_argument("--run-id", type=int, required=True)
+
+    export_parser = nested_subparsers.add_parser("export", description="Export one run HTML report.")
+    export_parser.add_argument("--id", type=int, required=True)
     parser.set_defaults(_handler=handle)
 
 
@@ -43,6 +46,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     show_parser = subparsers.add_parser("show", description="Show one run in detail.")
     show_parser.add_argument("--run-id", type=int, required=True)
+
+    export_parser = subparsers.add_parser("export", description="Export one run HTML report.")
+    export_parser.add_argument("--id", type=int, required=True)
 
     return parser
 
@@ -73,6 +79,14 @@ def handle(args: argparse.Namespace) -> int:
                     logs_dir=logs_dir,
                 )
                 _print_run_details(details)
+            elif args.command == "export":
+                details = get_run_details(
+                    session=session,
+                    run_id=args.id,
+                    reports_dir=reports_dir,
+                    logs_dir=logs_dir,
+                )
+                _write_run_export(details)
             else:
                 raise ValueError(f"Unsupported runs command: {args.command}")
     except ConfigError as exc:
@@ -146,6 +160,15 @@ def _print_run_details(details) -> None:
 def _print_artifact(label: str, path: str, exists: bool) -> None:
     print(f"{label}: {path}")
     print(f"{label}-exists: {'yes' if exists else 'no'}")
+
+
+def _write_run_export(details) -> None:
+    if not details.report_html.exists:
+        raise ValueError(f"HTML report is missing for run id: {details.run.id}")
+    try:
+        sys.stdout.write(Path(details.report_html.path).read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise ValueError(f"HTML report is missing for run id: {details.run.id}") from exc
 
 
 if __name__ == "__main__":

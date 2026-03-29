@@ -137,7 +137,8 @@ def test_templates_render_identity_content_and_empty_states(tmp_path: Path) -> N
         finished_at="2026-03-26T10:15:00+00:00",
         events=(),
         artifacts=(
-            SimpleNamespace(label="report json", exists=True, path="/tmp/report.json"),
+            SimpleNamespace(key="json", label="report json", exists=True, path="/tmp/report.json"),
+            SimpleNamespace(key="log", label="log file", exists=True, path="/tmp/run.log"),
         ),
     )
     result = ActionResult(
@@ -183,10 +184,10 @@ def test_templates_render_identity_content_and_empty_states(tmp_path: Path) -> N
             "run_details.html",
             run_details=run_details,
         )
-        assert "Export report is not wired yet." in render_template(
-            "run_details.html",
-            run_details=run_details,
-        )
+        run_details_html = render_template("run_details.html", run_details=run_details)
+        assert "/runs/7/reports/json" in run_details_html
+        assert "/runs/7/reports/log" not in run_details_html
+        assert "Export report is not wired yet." not in run_details_html
         assert "Backup now" in render_template("action_result.html", result=result)
         assert "summary" in render_template("action_result.html", result=result)
         assert "Oversized Skipped Files" in render_template(

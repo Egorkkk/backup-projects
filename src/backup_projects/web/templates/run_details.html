@@ -59,6 +59,7 @@
             <th>Artifact</th>
             <th>Exists</th>
             <th>Path</th>
+            <th>Download</th>
           </tr>
         </thead>
         <tbody>
@@ -67,11 +68,17 @@
               <td>{{ artifact.label }}</td>
               <td>{{ "yes" if artifact.exists else "no" }}</td>
               <td>{{ artifact.path }}</td>
+              <td>
+                {% if artifact.key in ("json", "text", "html") and artifact.exists %}
+                  <a href="{{ url_for('download_run_report', run_id=run_details.id, artifact_key=artifact.key) }}">Download</a>
+                {% else %}
+                  -
+                {% endif %}
+              </td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
-      <p>Export report is not wired yet.</p>
     </section>
   </section>
 {% endblock %}
