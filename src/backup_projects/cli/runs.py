@@ -18,6 +18,20 @@ from backup_projects.services.run_visibility_service import (
 )
 
 
+def register(subparsers) -> None:
+    parser = subparsers.add_parser("runs", description="List and inspect recorded runs.")
+    parser.add_argument("--config", required=True)
+    parser.add_argument("--rules-config", default="config/rules.yaml")
+    nested_subparsers = parser.add_subparsers(dest="command", required=True)
+
+    list_parser = nested_subparsers.add_parser("list", description="List top-level runs.")
+    list_parser.add_argument("--limit", type=int, default=100)
+
+    show_parser = nested_subparsers.add_parser("show", description="Show one run in detail.")
+    show_parser.add_argument("--run-id", type=int, required=True)
+    parser.set_defaults(_handler=handle)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="List and inspect recorded runs.")
     parser.add_argument("--config", required=True)
@@ -33,13 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = build_parser()
-    try:
-        args = parser.parse_args(argv)
-    except SystemExit as exc:
-        return int(exc.code)
-
+def handle(args: argparse.Namespace) -> int:
     try:
         config = load_config(app_path=args.config, rules_path=args.rules_config)
         engine = create_engine_from_config(config)
@@ -82,6 +90,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             engine.dispose()
 
     return 0
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = build_parser()
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    return handle(args)
 
 
 def _resolve_runtime_dir(base_dir: Path, configured_path: str) -> Path:

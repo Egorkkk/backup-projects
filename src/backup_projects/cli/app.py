@@ -5,9 +5,15 @@ from collections.abc import Sequence
 
 from backup_projects.cli import (
     backup,
+    dirs,
+    doctor,
     dry_run,
+    files,
+    include,
     init_db,
+    roots,
     rules,
+    runs,
     run_daily,
     run_weekly,
     scan_manual,
@@ -54,3 +60,9 @@ def _register_commands(subparsers) -> None:
     backup.register(subparsers)
     dry_run.register(subparsers)
     rules.register(subparsers)
+    include.register(subparsers)
+    runs.register(subparsers)
+    roots.register(subparsers)
+    dirs.register(subparsers)
+    files.register(subparsers)
+    doctor.register(subparsers)

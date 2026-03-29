@@ -10,42 +10,24 @@ from backup_projects.adapters.db.session import (
     session_scope,
 )
 from backup_projects.config import ConfigError, load_config
-from backup_projects.services.skipped_files_service import list_skipped_files
+from backup_projects.services.project_dirs_service import build_project_dirs_page_view
 
 
 def register(subparsers) -> None:
-    parser = subparsers.add_parser(
-        "files",
-        description="Inspect current file visibility decisions.",
-    )
+    parser = subparsers.add_parser("dirs", description="List known project directories.")
     parser.add_argument("--config", required=True)
     parser.add_argument("--rules-config", default="config/rules.yaml")
     nested_subparsers = parser.add_subparsers(dest="command", required=True)
-
-    list_skipped_parser = nested_subparsers.add_parser(
-        "list-skipped",
-        description="List skipped file paths for one current root.",
-    )
-    root_group = list_skipped_parser.add_mutually_exclusive_group(required=True)
-    root_group.add_argument("--root-id", type=int)
-    root_group.add_argument("--root-path")
+    nested_subparsers.add_parser("list", description="List known project directories.")
     parser.set_defaults(_handler=handle)
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Inspect current file visibility decisions.")
+    parser = argparse.ArgumentParser(description="List known project directories.")
     parser.add_argument("--config", required=True)
     parser.add_argument("--rules-config", default="config/rules.yaml")
-    subparsers = parser.add_subparsers(dest="command", required=True)
-
-    list_skipped_parser = subparsers.add_parser(
-        "list-skipped",
-        description="List skipped file paths for one current root.",
-    )
-    root_group = list_skipped_parser.add_mutually_exclusive_group(required=True)
-    root_group.add_argument("--root-id", type=int)
-    root_group.add_argument("--root-path")
-
+    nested_subparsers = parser.add_subparsers(dest="command", required=True)
+    nested_subparsers.add_parser("list", description="List known project directories.")
     return parser
 
 
@@ -56,15 +38,10 @@ def handle(args: argparse.Namespace) -> int:
         session_factory = create_session_factory(engine)
 
         with session_scope(session_factory) as session:
-            if args.command != "list-skipped":
-                raise ValueError(f"Unsupported files command: {args.command}")
-
-            result = list_skipped_files(
-                session=session,
-                root_id=args.root_id,
-                root_path=args.root_path,
-            )
-            _print_skipped_files(result)
+            if args.command != "list":
+                raise ValueError(f"Unsupported dirs command: {args.command}")
+            result = build_project_dirs_page_view(session=session)
+            _print_dirs(result.rows)
     except ConfigError as exc:
         print(str(exc), file=sys.stderr)
         return 2
@@ -91,14 +68,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     return handle(args)
 
 
-def _print_skipped_files(result) -> None:
-    print(f"Skipped files for root-id: {result.root_id}")
-    print(f"root-path: {result.root_path}")
-    if not result.skipped_files:
+def _print_dirs(rows) -> None:
+    print("Project directories")
+    if not rows:
         print("- none")
         return
-    for skipped_file in result.skipped_files:
-        print(f"- {skipped_file.path}")
+
+    for row in rows:
+        print(f"- id: {row.id}")
+        print(f"  root-id: {row.root_id}")
+        print(f"  root-name: {row.root_name}")
+        print(f"  root-path: {row.root_path}")
+        print(f"  relative-path: {row.relative_path}")
+        print(f"  name: {row.name}")
+        print(f"  dir-type: {row.dir_type}")
+        print(f"  status: {row.status}")
+        print(f"  last-seen-at: {row.last_seen_at}")
 
 
 if __name__ == "__main__":

@@ -554,23 +554,23 @@
 - [x] `rules disable-exclude`
 
 ## 15.6. Includes commands
-- [ ] `include add-file`
-- [ ] `include add-dir`
-- [ ] `include list`
-- [ ] `include disable`
-- [ ] `include enable`
+- [x] `include add-file`
+- [x] `include add-dir`
+- [x] `include list`
+- [x] `include disable`
+- [x] `include enable`
 
 ## 15.7. Info commands
-- [ ] `runs list`
-- [ ] `runs show`
-- [ ] `roots list`
-- [ ] `dirs list`
-- [ ] `files list-skipped`
-- [ ] `doctor`
+- [x] `runs list`
+- [x] `runs show`
+- [x] `roots list`
+- [x] `dirs list`
+- [x] `files list-skipped`
+- [x] `doctor`
 
 ## 15.8. Тесты
-- [ ] CLI smoke tests
-- [ ] CLI integration tests for main command groups
+- [x] CLI smoke tests
+- [x] CLI integration tests for main command groups
 
 ---
 
