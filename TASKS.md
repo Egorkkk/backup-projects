@@ -606,32 +606,32 @@
 # 18. Документация
 
 ## 18.1. README
-- [ ] Quick start
-- [ ] Dev setup
-- [ ] Run CLI
-- [ ] Run Flask UI
+- [x] Quick start
+- [x] Dev setup
+- [x] Run CLI
+- [x] Run Flask UI
 
 ## 18.2. ARCHITECTURE
-- [ ] Слои
-- [ ] Data flow
-- [ ] Jobs flow
+- [x] Слои
+- [x] Data flow
+- [x] Jobs flow
 
 ## 18.3. Policy doc
-- [ ] Allowed extensions
-- [ ] `.aaf` size policy = 100MB
-- [ ] Autosave included
-- [ ] Cache excluded
-- [ ] Manual include overrides
+- [x] Allowed extensions
+- [x] `.aaf` size policy = 100MB
+- [x] Autosave included
+- [x] Cache excluded
+- [x] Manual include overrides
 
 ## 18.4. Deployment doc
-- [ ] Runtime paths
-- [ ] cron
-- [ ] restic local repo
-- [ ] reverse proxy notes
+- [x] Runtime paths
+- [x] cron
+- [x] restic local repo
+- [x] reverse proxy notes
 
 ## 18.5. CLI doc
-- [ ] Список команд
-- [ ] Примеры использования
+- [x] Список команд
+- [x] Примеры использования
 
 ## 18.6. Web UI doc
 - [ ] Описание разделов
