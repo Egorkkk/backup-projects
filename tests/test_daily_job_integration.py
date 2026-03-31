@@ -10,6 +10,8 @@ from backup_projects.adapters.db.session import (
     create_session_factory,
     session_scope,
 )
+from backup_projects.adapters.process.command_runner import CommandResult
+from backup_projects.adapters.process.restic_runner import ResticCommandFailureError
 from backup_projects.adapters.filesystem.file_lock import acquire_file_lock
 from backup_projects.adapters.restic_adapter import ResticBackupResult
 from backup_projects.config import load_config
@@ -126,6 +128,94 @@ def test_run_daily_job_locked_result_creates_no_report_or_log(tmp_path: Path) ->
                     logs_dir=tmp_path / "runtime" / "logs",
                     run_id=result.run.id,
                 ).exists()
+    finally:
+        engine.dispose()
+
+
+def test_run_daily_job_surfaces_restic_failure_diagnostics(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    app_path, rules_path = _write_config_files(tmp_path)
+    show_root = tmp_path / "raid_a" / "show-a"
+    show_root.mkdir(parents=True, exist_ok=True)
+    (show_root / "edit.prproj").write_text("project", encoding="utf-8")
+
+    config = load_config(app_path=app_path, rules_path=rules_path)
+    _prepare_runtime_dirs(config=config)
+    initialize_database(config)
+
+    failure = ResticCommandFailureError(
+        CommandResult(
+            argv=(
+                "restic",
+                "backup",
+                "--json",
+                "--files-from-verbatim",
+                "/tmp/final.manifest.txt",
+            ),
+            returncode=10,
+            stdout="status line\nsecondary detail\n" * 50,
+            stderr="repo locked\ntry again later\n" * 50,
+            duration_seconds=1.5,
+        )
+    )
+
+    def fake_run_backup_from_manifest(request):
+        raise failure
+
+    monkeypatch.setattr(
+        daily_job_module,
+        "run_backup_from_manifest",
+        fake_run_backup_from_manifest,
+    )
+
+    engine = create_engine_from_config(config)
+    session_factory = create_session_factory(engine)
+    try:
+        with session_scope(session_factory) as session:
+            result = daily_job_module.run_daily_job(
+                session=session,
+                config=config,
+                now=lambda: datetime(2026, 3, 25, 9, 0, tzinfo=timezone.utc),
+            )
+
+            assert isinstance(result, DailyJobFinishedResult)
+            assert result.run.status == "failed"
+            assert len(result.targets) == 1
+            target = result.targets[0]
+            assert target.status == "failed"
+            assert target.backup_result is None
+            assert target.error is not None
+            assert "returncode=10" in target.error
+            assert "stderr='repo locked" in target.error
+            assert "stdout='status line" in target.error
+            assert "<truncated>" in target.error
+
+            failure_event = next(
+                event
+                for event in result.report.report.events
+                if event.event_type == "daily_root_failed"
+            )
+            assert failure_event.payload is not None
+            assert failure_event.payload["error"] == str(failure)
+            assert failure_event.payload["returncode"] == 10
+            assert failure_event.payload["argv"] == [
+                "restic",
+                "backup",
+                "--json",
+                "--files-from-verbatim",
+                "/tmp/final.manifest.txt",
+            ]
+            assert "repo locked" in str(failure_event.payload["stderr_excerpt"])
+            assert "status line" in str(failure_event.payload["stdout_excerpt"])
+            assert "<truncated>" in str(failure_event.payload["stderr_excerpt"])
+            assert "<truncated>" in str(failure_event.payload["stdout_excerpt"])
+
+            log_text = Path(result.log_file_path).read_text(encoding="utf-8")
+            assert "Daily backup failed for root" in log_text
+            assert "returncode=10" in log_text
+            assert "repo locked" in log_text
     finally:
         engine.dispose()
 

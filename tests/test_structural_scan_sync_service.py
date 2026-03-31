@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 import pytest
@@ -481,6 +482,116 @@ def test_sync_structural_scan_result_rejects_duplicate_project_file_identities(
         )
 
     assert dirs_repo.list_by_root(root.id) == []
+
+
+def test_sync_structural_scan_result_skips_file_rows_with_surrogate_paths(
+    db_session: Session, caplog: pytest.LogCaptureFixture
+) -> None:
+    roots_repo = RootsRepository(db_session)
+    dirs_repo = ProjectDirsRepository(db_session)
+    files_repo = ProjectFilesRepository(db_session)
+    root = _create_root(roots_repo, path="/mnt/raid_a/show-root")
+
+    with caplog.at_level(logging.WARNING):
+        result = sync_structural_scan_result(
+            session=db_session,
+            root_id=root.id,
+            scan_result=_make_scan_result(
+                root_path=root.path,
+                project_dirs=(
+                    _scanned_dir(
+                        relative_path="Show A",
+                        name="Show A",
+                        dir_type="premiere",
+                        files=(
+                            _scanned_file(
+                                relative_path="good.prproj",
+                                filename="good.prproj",
+                            ),
+                            _scanned_file(
+                                relative_path="bad\udcff.prproj",
+                                filename="bad\udcff.prproj",
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            synced_at="2026-03-14T10:00:00+00:00",
+        )
+
+    project_dir = dirs_repo.get_by_root_and_path(root_id=root.id, relative_path="Show A")
+    assert project_dir is not None
+    valid_file = files_repo.get_by_dir_and_path(
+        project_dir_id=project_dir.id,
+        relative_path="Show A/good.prproj",
+    )
+    stored_files = files_repo.list_by_project_dir(project_dir.id)
+
+    assert result.created_project_dir_count == 1
+    assert result.created_project_file_count == 1
+    assert valid_file is not None
+    assert [record.relative_path for record in stored_files] == ["Show A/good.prproj"]
+    assert "Skipping structural scan file" in caplog.text
+    assert "project_file.relative_path" in caplog.text
+    assert "Show A/bad\\xff.prproj" in caplog.text
+
+
+def test_sync_structural_scan_result_skips_project_dirs_with_surrogate_paths(
+    db_session: Session, caplog: pytest.LogCaptureFixture
+) -> None:
+    roots_repo = RootsRepository(db_session)
+    dirs_repo = ProjectDirsRepository(db_session)
+    files_repo = ProjectFilesRepository(db_session)
+    root = _create_root(roots_repo, path="/mnt/raid_a/show-root")
+
+    with caplog.at_level(logging.WARNING):
+        result = sync_structural_scan_result(
+            session=db_session,
+            root_id=root.id,
+            scan_result=_make_scan_result(
+                root_path=root.path,
+                project_dirs=(
+                    _scanned_dir(
+                        relative_path="bad\udcff-dir",
+                        name="bad\udcff-dir",
+                        dir_type="premiere",
+                        files=(
+                            _scanned_file(
+                                relative_path="edit.prproj",
+                                filename="edit.prproj",
+                            ),
+                        ),
+                    ),
+                    _scanned_dir(
+                        relative_path="Good",
+                        name="Good",
+                        dir_type="premiere",
+                        files=(
+                            _scanned_file(
+                                relative_path="edit.prproj",
+                                filename="edit.prproj",
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            synced_at="2026-03-14T10:00:00+00:00",
+        )
+
+    kept_dir = dirs_repo.get_by_root_and_path(root_id=root.id, relative_path="Good")
+    assert kept_dir is not None
+    kept_file = files_repo.get_by_dir_and_path(
+        project_dir_id=kept_dir.id,
+        relative_path="Good/edit.prproj",
+    )
+
+    assert result.created_project_dir_count == 1
+    assert result.created_project_file_count == 1
+    assert dirs_repo.list_by_root(root.id) == [kept_dir]
+    assert kept_file is not None
+    assert "Skipping structural scan project dir" in caplog.text
+    assert "project_dir.relative_path" in caplog.text
+    assert "bad\\xff-dir" in caplog.text
 
 
 def _create_root(roots_repo: RootsRepository, *, path: str):

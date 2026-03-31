@@ -8,6 +8,14 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from backup_projects.adapters.filesystem.path_utils import resolve_path
+from backup_projects.adapters.process.restic_runner import (
+    ResticCommandFailureError,
+    ResticTimeoutError,
+)
+from backup_projects.adapters.restic_adapter import (
+    ResticOutputParseError,
+    ResticSnapshotIdMissingError,
+)
 from backup_projects.config import ProjectConfig
 from backup_projects.domain.models import ManifestResult
 from backup_projects.repositories.project_dirs_repo import ProjectDirsRepository
@@ -50,6 +58,8 @@ from backup_projects.services.summary_service import (
     RunSummaryTargetInput,
     build_run_summary,
 )
+
+_BACKUP_DIAGNOSTIC_EXCERPT_LIMIT = 500
 
 
 @dataclass(frozen=True, slots=True)
@@ -359,19 +369,24 @@ def run_daily_job(
                         run_timestamp=run_timestamp,
                     )
                 except Exception as exc:
-                    target.mark_failed(str(exc))
+                    diagnostic = _build_backup_failure_diagnostic(exc)
+                    target.mark_failed(diagnostic.error_message)
                     events.append(
                         append_run_event(
                             session=session,
                             run_id=run.id,
                             event_type="daily_root_failed",
                             message=f"Daily backup failed for root: {root.path}",
-                            payload={"root_id": root.id, "error": str(exc)},
+                            payload={"root_id": root.id, **diagnostic.event_payload},
                             level="ERROR",
                             now=now,
                         )
                     )
-                    logger.exception("Daily backup failed for root %s", root.path)
+                    logger.exception(
+                        "Daily backup failed for root %s%s",
+                        root.path,
+                        diagnostic.log_suffix,
+                    )
                     continue
 
                 target.mark_completed(
@@ -615,3 +630,71 @@ def _try_append_failed_job_event(
         )
     except Exception:
         return
+
+
+@dataclass(frozen=True, slots=True)
+class _BackupFailureDiagnostic:
+    error_message: str
+    event_payload: dict[str, object]
+    log_suffix: str
+
+
+def _build_backup_failure_diagnostic(exc: Exception) -> _BackupFailureDiagnostic:
+    event_payload: dict[str, object] = {"error": str(exc)}
+    details: list[str] = []
+
+    if isinstance(
+        exc,
+        (
+            ResticCommandFailureError,
+            ResticTimeoutError,
+            ResticOutputParseError,
+            ResticSnapshotIdMissingError,
+        ),
+    ):
+        argv = getattr(exc, "argv", None)
+        if argv is not None:
+            argv_list = [str(part) for part in argv]
+            event_payload["argv"] = argv_list
+            details.append(f"argv={argv_list!r}")
+
+        returncode = getattr(exc, "returncode", None)
+        if isinstance(returncode, int):
+            event_payload["returncode"] = returncode
+            details.append(f"returncode={returncode}")
+
+        timeout_seconds = getattr(exc, "timeout_seconds", None)
+        if isinstance(timeout_seconds, (int, float)):
+            event_payload["timeout_seconds"] = timeout_seconds
+            details.append(f"timeout_seconds={timeout_seconds}")
+
+        stderr_excerpt = _make_excerpt(getattr(exc, "stderr", None))
+        if stderr_excerpt is not None:
+            event_payload["stderr_excerpt"] = stderr_excerpt
+            details.append(f"stderr={stderr_excerpt!r}")
+
+        stdout_excerpt = _make_excerpt(getattr(exc, "stdout", None))
+        if stdout_excerpt is not None:
+            event_payload["stdout_excerpt"] = stdout_excerpt
+            details.append(f"stdout={stdout_excerpt!r}")
+
+    detail_suffix = ""
+    if details:
+        detail_suffix = " | " + " | ".join(details)
+
+    return _BackupFailureDiagnostic(
+        error_message=f"{str(exc)}{detail_suffix}",
+        event_payload=event_payload,
+        log_suffix=detail_suffix,
+    )
+
+
+def _make_excerpt(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    if normalized == "":
+        return None
+    if len(normalized) <= _BACKUP_DIAGNOSTIC_EXCERPT_LIMIT:
+        return normalized
+    return normalized[:_BACKUP_DIAGNOSTIC_EXCERPT_LIMIT] + "...<truncated>"

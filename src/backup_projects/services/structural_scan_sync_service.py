@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
+import os
 
 from sqlalchemy.orm import Session
 
@@ -8,6 +10,8 @@ from backup_projects.repositories.project_dirs_repo import ProjectDirsRepository
 from backup_projects.repositories.project_files_repo import ProjectFilesRepository
 from backup_projects.repositories.roots_repo import RootsRepository
 from backup_projects.services.structural_scan_service import StructuralScanResult
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,6 +67,22 @@ def sync_structural_scan_result(
     marked_missing_project_file_count = 0
 
     for scanned_dir in scan_result.project_dirs:
+        invalid_dir_field = _find_invalid_text_field(
+            (
+                ("project_dir.relative_path", scanned_dir.relative_path),
+                ("project_dir.name", scanned_dir.name),
+            )
+        )
+        if invalid_dir_field is not None:
+            field_name, field_value = invalid_dir_field
+            logger.warning(
+                "Skipping structural scan project dir for root_id=%s due to non-UTF-8-safe %s: %s",
+                root_id,
+                field_name,
+                _render_filesystem_string(field_value),
+            )
+            continue
+
         scanned_dir_paths.add(scanned_dir.relative_path)
         existing_dir = existing_dirs_by_path.get(scanned_dir.relative_path)
 
@@ -101,6 +121,23 @@ def sync_structural_scan_result(
                 project_dir_relative_path=scanned_dir.relative_path,
                 file_relative_path=scanned_file.relative_path,
             )
+            invalid_file_field = _find_invalid_text_field(
+                (
+                    ("project_file.relative_path", stored_relative_path),
+                    ("project_file.filename", scanned_file.filename),
+                    ("project_file.extension", scanned_file.extension),
+                )
+            )
+            if invalid_file_field is not None:
+                field_name, field_value = invalid_file_field
+                logger.warning(
+                    "Skipping structural scan file for root_id=%s due to non-UTF-8-safe %s: %s",
+                    root_id,
+                    field_name,
+                    _render_filesystem_string(field_value),
+                )
+                continue
+
             existing_file = existing_files_by_path.get(stored_relative_path)
             if existing_file is None:
                 created_file = project_files_repo.create(
@@ -200,3 +237,24 @@ def _build_stored_file_relative_path(
     if project_dir_relative_path == "":
         return file_relative_path
     return f"{project_dir_relative_path}/{file_relative_path}"
+
+
+def _find_invalid_text_field(
+    fields: tuple[tuple[str, str], ...],
+) -> tuple[str, str] | None:
+    for field_name, field_value in fields:
+        if not _is_utf8_safe(field_value):
+            return field_name, field_value
+    return None
+
+
+def _is_utf8_safe(value: str) -> bool:
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        return False
+    return True
+
+
+def _render_filesystem_string(value: str) -> str:
+    return os.fsencode(value).decode("ascii", "backslashreplace")
