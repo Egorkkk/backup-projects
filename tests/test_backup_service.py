@@ -174,6 +174,39 @@ def test_run_backup_from_manifest_rejects_directory_manifest_path(
     assert str(exc_info.value) == str(manifest_dir)
 
 
+def test_run_backup_from_manifest_skips_empty_manifest_without_invoking_restic(
+    tmp_path: Path,
+) -> None:
+    manifest_file_path = tmp_path / "empty.manifest.txt"
+    manifest_file_path.write_text("", encoding="utf-8")
+    captured = {"called": False}
+
+    def fake_backup_runner(_: ResticBackupRequest) -> ResticBackupResult:
+        captured["called"] = True
+        raise AssertionError("restic runner should not be called for an empty manifest")
+
+    result = run_backup_from_manifest(
+        BackupServiceRequest(
+            manifest_result=ManifestResult(
+                manifest_paths=(),
+                decisions=(),
+                manifest_file_path=str(manifest_file_path),
+                json_manifest_file_path=f"{manifest_file_path}.json",
+                summary_file_path=f"{manifest_file_path}.summary",
+            ),
+            restic_binary="restic",
+            restic_repository="/mnt/backup/repo",
+            restic_password_env_var="RESTIC_PASSWORD",
+            restic_timeout_seconds=300,
+        ),
+        backup_runner=fake_backup_runner,
+    )
+
+    assert captured["called"] is False
+    assert result.restic_result is None
+    assert result.message == "Backup skipped: manifest include set is empty"
+
+
 def test_run_backup_from_manifest_propagates_restic_command_failure_unchanged(
     tmp_path: Path,
 ) -> None:

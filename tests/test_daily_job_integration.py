@@ -132,6 +132,60 @@ def test_run_daily_job_locked_result_creates_no_report_or_log(tmp_path: Path) ->
         engine.dispose()
 
 
+def test_run_daily_job_skips_empty_manifest_without_failing(
+    tmp_path: Path,
+) -> None:
+    app_path, rules_path = _write_config_files(tmp_path)
+    show_root = tmp_path / "raid_a" / "show-empty"
+    show_root.mkdir(parents=True, exist_ok=True)
+
+    config = load_config(app_path=app_path, rules_path=rules_path)
+    _prepare_runtime_dirs(config=config)
+    initialize_database(config)
+
+    engine = create_engine_from_config(config)
+    session_factory = create_session_factory(engine)
+    try:
+        with session_scope(session_factory) as session:
+            result = daily_job_module.run_daily_job(
+                session=session,
+                config=config,
+                now=lambda: datetime(2026, 3, 25, 9, 15, tzinfo=timezone.utc),
+            )
+
+            assert isinstance(result, DailyJobFinishedResult)
+            assert result.run.status == "completed"
+            assert len(result.targets) == 1
+
+            target = result.targets[0]
+            assert target.status == "completed"
+            assert target.backup_result is not None
+            assert target.backup_result.restic_result is None
+            assert target.error == "Backup skipped: manifest include set is empty"
+            assert Path(target.manifest_result.manifest_file_path).is_file()
+
+            skipped_event = next(
+                event
+                for event in result.report.report.events
+                if event.event_type == "daily_root_skipped"
+            )
+            assert skipped_event.payload is not None
+            assert skipped_event.payload["root_id"] == target.root_id
+            assert skipped_event.payload["message"] == target.error
+            assert skipped_event.payload["manifest_file_path"] == target.manifest_result.manifest_file_path
+
+            report_target = result.report.report.targets[0]
+            assert report_target.status == "completed"
+            assert report_target.backup is None
+            assert report_target.error == target.error
+
+            log_text = Path(result.log_file_path).read_text(encoding="utf-8")
+            assert "Daily backup skipped for root" in log_text
+            assert "manifest include set is empty" in log_text
+    finally:
+        engine.dispose()
+
+
 def test_run_daily_job_surfaces_restic_failure_diagnostics(
     tmp_path: Path,
     monkeypatch,

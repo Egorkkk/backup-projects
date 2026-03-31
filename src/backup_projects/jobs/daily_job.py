@@ -100,11 +100,17 @@ class _TargetAccumulator:
         self.status = "failed"
         self.error = error
 
-    def mark_completed(self, *, manifest_result, backup_result: BackupServiceResult) -> None:
+    def mark_completed(
+        self,
+        *,
+        manifest_result,
+        backup_result: BackupServiceResult,
+        error: str | None = None,
+    ) -> None:
         self.status = "completed"
         self.manifest_result = manifest_result
         self.backup_result = backup_result
-        self.error = None
+        self.error = error
 
     def to_result(self) -> DailyJobTargetResult:
         status = self.status or "completed"
@@ -392,7 +398,30 @@ def run_daily_job(
                 target.mark_completed(
                     manifest_result=manifest_result,
                     backup_result=backup_result,
+                    error=backup_result.message,
                 )
+                if backup_result.restic_result is None:
+                    events.append(
+                        append_run_event(
+                            session=session,
+                            run_id=run.id,
+                            event_type="daily_root_skipped",
+                            message=f"Daily backup skipped for root: {root.path}",
+                            payload={
+                                "root_id": root.id,
+                                "manifest_file_path": manifest_result.manifest_file_path,
+                                "message": backup_result.message,
+                            },
+                            now=now,
+                        )
+                    )
+                    logger.info(
+                        "Daily backup skipped for root %s: %s",
+                        root.path,
+                        backup_result.message,
+                    )
+                    continue
+
                 events.append(
                     append_run_event(
                         session=session,
@@ -575,6 +604,7 @@ def _build_summary_targets(
             backup_result=(
                 target.backup_result.restic_result
                 if target.backup_result is not None
+                and target.backup_result.restic_result is not None
                 else None
             ),
         )
@@ -594,6 +624,7 @@ def _build_report_targets(
             backup_result=(
                 target.backup_result.restic_result
                 if target.backup_result is not None
+                and target.backup_result.restic_result is not None
                 else None
             ),
             error=target.error,

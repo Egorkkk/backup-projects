@@ -84,7 +84,13 @@ def _print_finished_result(result: DailyJobFinishedResult) -> None:
                 root_id=target.root_id,
                 root_path=target.root_path,
                 manifest_result=target.manifest_result,
-                snapshot_id=target.backup_result.restic_result.snapshot_id,
+                snapshot_id=(
+                    target.backup_result.restic_result.snapshot_id
+                    if target.backup_result is not None
+                    and target.backup_result.restic_result is not None
+                    else None
+                ),
+                backup_note=target.error,
             )
             continue
 
@@ -103,14 +109,18 @@ def _print_root_success(
     root_id: int,
     root_path: str,
     manifest_result,
-    snapshot_id: str,
+    snapshot_id: str | None,
+    backup_note: str | None = None,
 ) -> None:
     print(f"Daily backup root-id: {root_id}")
     print(f"root-path: {root_path}")
     print(f"manifest-file: {manifest_result.manifest_file_path}")
     print(f"json-manifest-file: {manifest_result.json_manifest_file_path}")
     print(f"summary-file: {manifest_result.summary_file_path}")
-    print(f"snapshot-id: {snapshot_id}")
+    if snapshot_id is not None:
+        print(f"snapshot-id: {snapshot_id}")
+    elif backup_note is not None:
+        print(f"backup-note: {backup_note}")
     print()
 
 

@@ -86,7 +86,10 @@ def _print_root_success(root) -> None:
     print(f"manifest-file: {root.manifest_result.manifest_file_path}")
     print(f"json-manifest-file: {root.manifest_result.json_manifest_file_path}")
     print(f"summary-file: {root.manifest_result.summary_file_path}")
-    print(f"snapshot-id: {root.backup_result.restic_result.snapshot_id}")
+    if root.backup_result is not None and root.backup_result.restic_result is not None:
+        print(f"snapshot-id: {root.backup_result.restic_result.snapshot_id}")
+    elif root.error is not None:
+        print(f"backup-note: {root.error}")
     print()
 
 

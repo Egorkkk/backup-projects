@@ -121,6 +121,54 @@ def test_run_daily_prints_finished_job_result(monkeypatch, capsys) -> None:
     assert "roots-failed: 0" in captured.out
 
 
+def test_run_daily_prints_backup_note_for_completed_empty_manifest(monkeypatch, capsys) -> None:
+    from backup_projects.cli import run_daily as run_daily_module
+
+    fake_config = SimpleNamespace()
+    result = _make_finished_result(
+        status="completed",
+        targets=(
+            DailyJobTargetResult(
+                root_id=3,
+                root_path="/mnt/raid_a/projects/show-empty",
+                status="completed",
+                manifest_result=SimpleNamespace(
+                    manifest_file_path="/tmp/manifests/daily-root-3.manifest.txt",
+                    json_manifest_file_path="/tmp/manifests/daily-root-3.manifest.json",
+                    summary_file_path="/tmp/manifests/daily-root-3.summary.txt",
+                ),
+                backup_result=SimpleNamespace(restic_result=None),
+                error="Backup skipped: manifest include set is empty",
+            ),
+        ),
+    )
+
+    class FakeEngine:
+        def dispose(self) -> None:
+            return None
+
+    @contextmanager
+    def fake_session_scope(_session_factory):
+        yield "fake-session"
+
+    monkeypatch.setattr(run_daily_module, "load_config", lambda app_path, rules_path: fake_config)
+    monkeypatch.setattr(run_daily_module, "create_engine_from_config", lambda config: FakeEngine())
+    monkeypatch.setattr(run_daily_module, "create_session_factory", lambda engine: "fake-factory")
+    monkeypatch.setattr(run_daily_module, "session_scope", fake_session_scope)
+    monkeypatch.setattr(
+        run_daily_module,
+        "run_daily_job",
+        lambda *, session, config: result,
+    )
+
+    exit_code = run_daily_module.main(["--config", "config/app.yaml"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "backup-note: Backup skipped: manifest include set is empty" in captured.out
+    assert "snapshot-id:" not in captured.out
+
+
 def test_run_daily_prints_locked_result(monkeypatch, capsys) -> None:
     from backup_projects.cli import run_daily as run_daily_module
 

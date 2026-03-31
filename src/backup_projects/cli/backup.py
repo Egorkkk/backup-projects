@@ -129,7 +129,12 @@ def handle(args: argparse.Namespace) -> int:
             root_id=root.id,
             root_path=root.path,
             manifest_result=manifest_result,
-            snapshot_id=backup_service_result.restic_result.snapshot_id,
+            snapshot_id=(
+                backup_service_result.restic_result.snapshot_id
+                if backup_service_result.restic_result is not None
+                else None
+            ),
+            backup_note=backup_service_result.message,
         )
     except ConfigError as exc:
         print(str(exc), file=sys.stderr)
@@ -186,7 +191,8 @@ def _print_backup_success(
     root_id: int,
     root_path: str,
     manifest_result,
-    snapshot_id: str,
+    snapshot_id: str | None,
+    backup_note: str | None = None,
 ) -> None:
     print(f"Backup for root-id: {root_id}")
     print(f"root-path: {root_path}")
@@ -194,7 +200,10 @@ def _print_backup_success(
     print(f"manifest-file: {manifest_result.manifest_file_path}")
     print(f"json-manifest-file: {manifest_result.json_manifest_file_path}")
     print(f"summary-file: {manifest_result.summary_file_path}")
-    print(f"snapshot-id: {snapshot_id}")
+    if snapshot_id is not None:
+        print(f"snapshot-id: {snapshot_id}")
+    elif backup_note is not None:
+        print(f"backup-note: {backup_note}")
 
 
 def _print_locked_run(lock_result: RunLockDenied) -> None:

@@ -401,6 +401,103 @@ def test_backup_root_path_flow_resolves_path_before_lookup(monkeypatch, capsys) 
     assert "snapshot-id: snapshot-456" in captured.out
 
 
+def test_backup_empty_manifest_returns_successful_noop_and_prints_note(
+    monkeypatch,
+    capsys,
+) -> None:
+    from backup_projects.cli import backup as backup_module
+
+    fake_config = _make_backup_config()
+    root_record = SimpleNamespace(id=12, path="/mnt/raid_a/projects/show-empty")
+    built_manifest = BuiltManifest(
+        manifest_paths=(),
+        decisions=(),
+        json_payload={},
+        summary_text="Manifest summary\nTotal decisions: 0",
+    )
+    manifest_result = ManifestResult(
+        manifest_paths=(),
+        decisions=(),
+        manifest_file_path="/tmp/out/show-empty.manifest.txt",
+        json_manifest_file_path="/tmp/out/show-empty.manifest.json",
+        summary_file_path="/tmp/out/show-empty.summary.txt",
+    )
+
+    class FakeEngine:
+        def dispose(self) -> None:
+            return None
+
+    class FakeRootsRepository:
+        def __init__(self, session) -> None:
+            return None
+
+        def get_by_id(self, root_id):
+            return root_record
+
+        def get_by_path(self, path):
+            return None
+
+    @contextmanager
+    def fake_session_scope(_session_factory):
+        yield "fake-session"
+
+    monkeypatch.setattr(
+        backup_module,
+        "load_config",
+        lambda app_path, rules_path: fake_config,
+    )
+    monkeypatch.setattr(
+        backup_module,
+        "create_engine_from_config",
+        lambda config: FakeEngine(),
+    )
+    monkeypatch.setattr(
+        backup_module,
+        "create_session_factory",
+        lambda engine: "fake-factory",
+    )
+    monkeypatch.setattr(backup_module, "session_scope", fake_session_scope)
+    monkeypatch.setattr(backup_module, "RootsRepository", FakeRootsRepository)
+    _patch_run_lifecycle_locking(monkeypatch, backup_module)
+    monkeypatch.setattr(
+        backup_module,
+        "build_root_dry_run_manifest",
+        lambda *, session, root_id: built_manifest,
+    )
+    monkeypatch.setattr(
+        backup_module,
+        "write_manifest",
+        lambda *, built_manifest, output_dir, artifact_stem: manifest_result,
+    )
+    monkeypatch.setattr(
+        backup_module,
+        "run_backup_from_manifest",
+        lambda request: BackupServiceResult(
+            manifest_result=manifest_result,
+            restic_result=None,
+            message="Backup skipped: manifest include set is empty",
+        ),
+    )
+
+    exit_code = backup_module.main(
+        [
+            "--config",
+            "config/app.yaml",
+            "--root-id",
+            "12",
+            "--output-dir",
+            "/tmp/out",
+            "--artifact-stem",
+            "show-empty",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "backup-note: Backup skipped: manifest include set is empty" in captured.out
+    assert "snapshot-id:" not in captured.out
+
+
 def test_backup_write_manifest_failure_is_operational_failure(
     monkeypatch,
     capsys,

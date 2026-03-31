@@ -10,6 +10,8 @@ from backup_projects.adapters.restic_adapter import (
 )
 from backup_projects.domain.models import ManifestResult
 
+EMPTY_MANIFEST_SKIP_MESSAGE = "Backup skipped: manifest include set is empty"
+
 
 @dataclass(frozen=True, slots=True)
 class BackupServiceRequest:
@@ -23,7 +25,8 @@ class BackupServiceRequest:
 @dataclass(frozen=True, slots=True)
 class BackupServiceResult:
     manifest_result: ManifestResult
-    restic_result: ResticBackupResult
+    restic_result: ResticBackupResult | None
+    message: str | None = None
 
 
 def run_backup_from_manifest(
@@ -40,6 +43,13 @@ def run_backup_from_manifest(
     manifest_path = Path(normalized_manifest_file_path)
     if not manifest_path.exists() or not manifest_path.is_file():
         raise FileNotFoundError(manifest_file_path)
+
+    if not request.manifest_result.manifest_paths:
+        return BackupServiceResult(
+            manifest_result=request.manifest_result,
+            restic_result=None,
+            message=EMPTY_MANIFEST_SKIP_MESSAGE,
+        )
 
     restic_result = backup_runner(
         ResticBackupRequest(
