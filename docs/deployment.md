@@ -49,7 +49,7 @@ The repo-local `.venv` must exist for the launcher to work.
 
 ## Reverse Proxy Notes
 
-The accepted current web launcher remains `scripts/dev_run_web.sh`, which starts the Flask app using the configured `web.host`, `web.port`, and `web.debug` values. Reverse proxying is an optional deployment layer on top of that same listener, not a different application mode. The example config uses `127.0.0.1`, `8080`, and `debug: false`, so a same-host reverse proxy can point at that local upstream when HTTP exposure is needed.
+The accepted current web launcher remains `scripts/dev_run_web.sh`, which starts the Flask app using `config/app.yaml` and `config/rules.yaml` by default and binds to the configured `web.host`, `web.port`, and `web.debug` values. `APP_CONFIG` and `RULES_CONFIG` may be used to override those paths when needed. Reverse proxying is an optional deployment layer on top of that same listener, not a different application mode. The example config values are `127.0.0.1`, `8080`, and `debug: false`, so a same-host reverse proxy can point at that local upstream when HTTP exposure is needed.
 
 - the current baseline is simple root-path proxying to the configured Flask listener
 - operators who change `web.host` or `web.port` in real config should point their reverse proxy upstream to that configured address

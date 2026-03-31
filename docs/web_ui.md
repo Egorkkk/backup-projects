@@ -6,11 +6,13 @@ This document describes the accepted current Flask UI surface and a few typical 
 
 The canonical launcher is `scripts/dev_run_web.sh`.
 
-That launcher currently loads:
-- `config/app.example.yaml`
-- `config/rules.example.yaml`
+That launcher currently loads by default:
+- `config/app.yaml`
+- `config/rules.yaml`
 
-The example config defaults to `http://127.0.0.1:8080/`.
+If needed, `APP_CONFIG` and `RULES_CONFIG` can override those paths.
+
+The example config values are `http://127.0.0.1:8080/` with `debug: false`.
 
 ## Sections
 
