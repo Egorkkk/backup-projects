@@ -7,91 +7,98 @@
 {%- endmacro %}
 
 {% block content %}
-  <section class="shell">
-    <h1>Dashboard</h1>
+  <section class="shell dashboard-shell">
+    <header class="dashboard-header">
+      <h1>Dashboard</h1>
+      <p class="dashboard-subtitle">Operational status and quick actions for the current backup environment.</p>
+    </header>
 
-    <section>
-      <h2>Actions</h2>
-      <form method="post" action="{{ url_for('run_daily_action') }}">
-        <button type="submit">Run daily now</button>
-      </form>
-      <form method="post" action="{{ url_for('run_backup_action') }}">
-        <button type="submit">Backup now</button>
-      </form>
-    </section>
+    <section class="dashboard-grid">
+      <section class="dashboard-card dashboard-card-actions">
+        <h2>Actions</h2>
+        <div class="dashboard-actions">
+          <form method="post" action="{{ url_for('run_daily_action') }}">
+            <button type="submit" class="dashboard-button">Run daily now</button>
+          </form>
+          <form method="post" action="{{ url_for('run_backup_action') }}">
+            <button type="submit" class="dashboard-button">Backup now</button>
+          </form>
+        </div>
+      </section>
 
-    <section>
-      <h2>Last scan</h2>
-      <dl>
-        <dt>Run id</dt>
-        <dd>{{ value_or_dash(dashboard.last_scan.run_id) }}</dd>
-        <dt>Run type</dt>
-        <dd>{{ value_or_dash(dashboard.last_scan.run_type) }}</dd>
-        <dt>Status</dt>
-        <dd>{{ value_or_dash(dashboard.last_scan.status) }}</dd>
-        <dt>Started at</dt>
-        <dd>{{ value_or_dash(dashboard.last_scan.started_at) }}</dd>
-        <dt>Finished at</dt>
-        <dd>{{ value_or_dash(dashboard.last_scan.finished_at) }}</dd>
-      </dl>
-    </section>
+      <section class="dashboard-card">
+        <h2>Last scan</h2>
+        <dl class="dashboard-metadata">
+          <dt>Run id</dt>
+          <dd>{{ value_or_dash(dashboard.last_scan.run_id) }}</dd>
+          <dt>Run type</dt>
+          <dd>{{ value_or_dash(dashboard.last_scan.run_type) }}</dd>
+          <dt>Status</dt>
+          <dd>{{ value_or_dash(dashboard.last_scan.status) }}</dd>
+          <dt>Started at</dt>
+          <dd>{{ value_or_dash(dashboard.last_scan.started_at) }}</dd>
+          <dt>Finished at</dt>
+          <dd>{{ value_or_dash(dashboard.last_scan.finished_at) }}</dd>
+        </dl>
+      </section>
 
-    <section>
-      <h2>Last backup</h2>
-      <dl>
-        <dt>Run id</dt>
-        <dd>{{ value_or_dash(dashboard.last_backup.run_id) }}</dd>
-        <dt>Run type</dt>
-        <dd>{{ value_or_dash(dashboard.last_backup.run_type) }}</dd>
-        <dt>Status</dt>
-        <dd>{{ value_or_dash(dashboard.last_backup.status) }}</dd>
-        <dt>Started at</dt>
-        <dd>{{ value_or_dash(dashboard.last_backup.started_at) }}</dd>
-        <dt>Finished at</dt>
-        <dd>{{ value_or_dash(dashboard.last_backup.finished_at) }}</dd>
-      </dl>
-    </section>
+      <section class="dashboard-card">
+        <h2>Last backup</h2>
+        <dl class="dashboard-metadata">
+          <dt>Run id</dt>
+          <dd>{{ value_or_dash(dashboard.last_backup.run_id) }}</dd>
+          <dt>Run type</dt>
+          <dd>{{ value_or_dash(dashboard.last_backup.run_type) }}</dd>
+          <dt>Status</dt>
+          <dd>{{ value_or_dash(dashboard.last_backup.status) }}</dd>
+          <dt>Started at</dt>
+          <dd>{{ value_or_dash(dashboard.last_backup.started_at) }}</dd>
+          <dt>Finished at</dt>
+          <dd>{{ value_or_dash(dashboard.last_backup.finished_at) }}</dd>
+        </dl>
+      </section>
 
-    <section>
-      <h2>Run status</h2>
-      <dl>
-        <dt>Run id</dt>
-        <dd>{{ value_or_dash(dashboard.run_status.run_id) }}</dd>
-        <dt>Run type</dt>
-        <dd>{{ value_or_dash(dashboard.run_status.run_type) }}</dd>
-        <dt>Status</dt>
-        <dd>{{ value_or_dash(dashboard.run_status.status) }}</dd>
-        <dt>Trigger mode</dt>
-        <dd>{{ value_or_dash(dashboard.run_status.trigger_mode) }}</dd>
-        <dt>Started at</dt>
-        <dd>{{ value_or_dash(dashboard.run_status.started_at) }}</dd>
-        <dt>Finished at</dt>
-        <dd>{{ value_or_dash(dashboard.run_status.finished_at) }}</dd>
-      </dl>
-    </section>
+      <section class="dashboard-card">
+        <h2>Run status</h2>
+        <dl class="dashboard-metadata">
+          <dt>Run id</dt>
+          <dd>{{ value_or_dash(dashboard.run_status.run_id) }}</dd>
+          <dt>Run type</dt>
+          <dd>{{ value_or_dash(dashboard.run_status.run_type) }}</dd>
+          <dt>Status</dt>
+          <dd>{{ value_or_dash(dashboard.run_status.status) }}</dd>
+          <dt>Trigger mode</dt>
+          <dd>{{ value_or_dash(dashboard.run_status.trigger_mode) }}</dd>
+          <dt>Started at</dt>
+          <dd>{{ value_or_dash(dashboard.run_status.started_at) }}</dd>
+          <dt>Finished at</dt>
+          <dd>{{ value_or_dash(dashboard.run_status.finished_at) }}</dd>
+        </dl>
+      </section>
 
-    <section>
-      <h2>Counts</h2>
-      <dl>
-        <dt>Included</dt>
-        <dd>{{ value_or_dash(dashboard.counts.included) }}</dd>
-        <dt>Skipped</dt>
-        <dd>{{ value_or_dash(dashboard.counts.skipped) }}</dd>
-        <dt>New</dt>
-        <dd>{{ value_or_dash(dashboard.counts.new) }}</dd>
-        <dt>Changed</dt>
-        <dd>{{ value_or_dash(dashboard.counts.changed) }}</dd>
-      </dl>
-    </section>
+      <section class="dashboard-card">
+        <h2>Counts</h2>
+        <dl class="dashboard-metadata dashboard-metadata-accent">
+          <dt>Included</dt>
+          <dd>{{ value_or_dash(dashboard.counts.included) }}</dd>
+          <dt>Skipped</dt>
+          <dd>{{ value_or_dash(dashboard.counts.skipped) }}</dd>
+          <dt>New</dt>
+          <dd>{{ value_or_dash(dashboard.counts.new) }}</dd>
+          <dt>Changed</dt>
+          <dd>{{ value_or_dash(dashboard.counts.changed) }}</dd>
+        </dl>
+      </section>
 
-    <section>
-      <h2>Skipped oversized summary</h2>
-      <dl>
-        <dt>Oversize skipped</dt>
-        <dd>{{ value_or_dash(dashboard.skipped_oversized_summary.skipped_count) }}</dd>
-        <dt>Oversize warnings</dt>
-        <dd>{{ value_or_dash(dashboard.skipped_oversized_summary.warning_count) }}</dd>
-      </dl>
+      <section class="dashboard-card">
+        <h2>Skipped oversized summary</h2>
+        <dl class="dashboard-metadata dashboard-metadata-accent">
+          <dt>Oversize skipped</dt>
+          <dd>{{ value_or_dash(dashboard.skipped_oversized_summary.skipped_count) }}</dd>
+          <dt>Oversize warnings</dt>
+          <dd>{{ value_or_dash(dashboard.skipped_oversized_summary.warning_count) }}</dd>
+        </dl>
+      </section>
     </section>
   </section>
 {% endblock %}
