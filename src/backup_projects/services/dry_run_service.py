@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
@@ -29,6 +30,32 @@ from backup_projects.services.rule_loader import load_policy_config
 class _MatchedManualInclude:
     manual_include_id: int
     force_include: bool
+
+
+@dataclass(frozen=True, slots=True)
+class RootDryRunManifestPlan:
+    root_id: int
+    status: str
+    built_manifest: BuiltManifest | None = None
+    error: str | None = None
+
+    @property
+    def included_count(self) -> int:
+        if self.built_manifest is None:
+            return 0
+        return sum(1 for decision in self.built_manifest.decisions if decision.include)
+
+    @property
+    def skipped_count(self) -> int:
+        if self.built_manifest is None:
+            return 0
+        return sum(1 for decision in self.built_manifest.decisions if not decision.include)
+
+
+@dataclass(frozen=True, slots=True)
+class MultiRootDryRunManifestPlan:
+    root_plans: tuple[RootDryRunManifestPlan, ...]
+    built_manifest: BuiltManifest
 
 
 def build_root_dry_run_manifest(*, session: Session, root_id: int) -> BuiltManifest:
@@ -64,6 +91,45 @@ def build_root_dry_run_manifest(*, session: Session, root_id: int) -> BuiltManif
             )
 
     return build_manifest(decisions=decisions)
+
+
+def build_multi_root_dry_run_manifest(
+    *,
+    session: Session,
+    root_ids: Sequence[int],
+) -> MultiRootDryRunManifestPlan:
+    root_plans: list[RootDryRunManifestPlan] = []
+    combined_decisions = []
+
+    for root_id in root_ids:
+        try:
+            built_manifest = build_root_dry_run_manifest(
+                session=session,
+                root_id=root_id,
+            )
+        except Exception as exc:
+            root_plans.append(
+                RootDryRunManifestPlan(
+                    root_id=root_id,
+                    status="failed",
+                    error=str(exc),
+                )
+            )
+            continue
+
+        root_plans.append(
+            RootDryRunManifestPlan(
+                root_id=root_id,
+                status="completed",
+                built_manifest=built_manifest,
+            )
+        )
+        combined_decisions.extend(built_manifest.decisions)
+
+    return MultiRootDryRunManifestPlan(
+        root_plans=tuple(root_plans),
+        built_manifest=build_manifest(decisions=combined_decisions),
+    )
 
 
 def _build_decision_candidate(

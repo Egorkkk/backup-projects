@@ -65,10 +65,23 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _print_finished_result(result: BackupJobFinishedResult) -> None:
+    _print_run_artifacts(
+        manifest_result=result.manifest_result,
+        snapshot_id=(
+            result.backup_result.restic_result.snapshot_id
+            if result.backup_result is not None
+            and result.backup_result.restic_result is not None
+            else None
+        ),
+        backup_note=(
+            result.backup_result.message
+            if result.backup_result is not None
+            else None
+        ),
+    )
+
     for root in result.roots:
-        if root.status == "completed":
-            _print_root_success(root)
-            continue
+        _print_root_result(root)
 
         if root.error is not None:
             print(root.error, file=sys.stderr)
@@ -80,16 +93,31 @@ def _print_finished_result(result: BackupJobFinishedResult) -> None:
     )
 
 
-def _print_root_success(root) -> None:
+def _print_run_artifacts(
+    *,
+    manifest_result,
+    snapshot_id: str | None,
+    backup_note: str | None = None,
+) -> None:
+    if manifest_result is None:
+        return
+    print("Backup run")
+    print(f"manifest-file: {manifest_result.manifest_file_path}")
+    print(f"json-manifest-file: {manifest_result.json_manifest_file_path}")
+    print(f"summary-file: {manifest_result.summary_file_path}")
+    if snapshot_id is not None:
+        print(f"snapshot-id: {snapshot_id}")
+    elif backup_note is not None:
+        print(f"backup-note: {backup_note}")
+    print()
+
+
+def _print_root_result(root) -> None:
     print(f"Backup root-id: {root.root_id}")
     print(f"root-path: {root.root_path}")
-    print(f"manifest-file: {root.manifest_result.manifest_file_path}")
-    print(f"json-manifest-file: {root.manifest_result.json_manifest_file_path}")
-    print(f"summary-file: {root.manifest_result.summary_file_path}")
-    if root.backup_result is not None and root.backup_result.restic_result is not None:
-        print(f"snapshot-id: {root.backup_result.restic_result.snapshot_id}")
-    elif root.error is not None:
-        print(f"backup-note: {root.error}")
+    print(f"status: {root.status}")
+    print(f"included-count: {root.included_count}")
+    print(f"skipped-count: {root.skipped_count}")
     print()
 
 

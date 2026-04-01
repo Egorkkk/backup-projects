@@ -31,6 +31,8 @@ class RunReportTarget:
     status: str
     root_id: int | None = None
     root_path: str | None = None
+    included_count: int = 0
+    skipped_count: int = 0
     manifest: RunReportManifest | None = None
     backup: RunReportBackup | None = None
     error: str | None = None
@@ -42,6 +44,8 @@ class RunReport:
     run: RunLifecycleRecord
     events: tuple[RunLifecycleEvent, ...]
     targets: tuple[RunReportTarget, ...]
+    manifest: RunReportManifest | None = None
+    backup: RunReportBackup | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +53,8 @@ class RunReportTargetInput:
     status: str
     root_id: int | None = None
     root_path: str | None = None
+    included_count: int | None = None
+    skipped_count: int | None = None
     manifest_result: ManifestResult | None = None
     backup_result: ResticBackupResult | None = None
     error: str | None = None
@@ -68,11 +74,15 @@ def build_run_report(
     run: RunLifecycleRecord,
     events: Iterable[RunLifecycleEvent],
     targets: Iterable[RunReportTargetInput],
+    manifest_result: ManifestResult | None = None,
+    backup_result: ResticBackupResult | None = None,
 ) -> RunReport:
     return RunReport(
         format_version=REPORT_FORMAT_VERSION,
         run=run,
         events=tuple(events),
+        manifest=_to_run_report_manifest(manifest_result),
+        backup=_to_run_report_backup(backup_result),
         targets=tuple(_to_run_report_target(target) for target in targets),
     )
 
@@ -83,9 +93,17 @@ def write_run_report(
     run: RunLifecycleRecord,
     events: Iterable[RunLifecycleEvent],
     targets: Iterable[RunReportTargetInput],
+    manifest_result: ManifestResult | None = None,
+    backup_result: ResticBackupResult | None = None,
 ) -> RunReportArtifacts:
     normalized_reports_dir = _validate_reports_dir(reports_dir)
-    report = build_run_report(run=run, events=events, targets=targets)
+    report = build_run_report(
+        run=run,
+        events=events,
+        targets=targets,
+        manifest_result=manifest_result,
+        backup_result=backup_result,
+    )
     report_dir = normalized_reports_dir / f"run-{report.run.id}"
     report_dir.mkdir(parents=True, exist_ok=True)
 
@@ -107,14 +125,29 @@ def write_run_report(
 
 
 def _to_run_report_target(target: RunReportTargetInput) -> RunReportTarget:
+    included_count, skipped_count = _extract_target_manifest_counts(target)
     return RunReportTarget(
         status=target.status,
         root_id=target.root_id,
         root_path=target.root_path,
+        included_count=included_count,
+        skipped_count=skipped_count,
         manifest=_to_run_report_manifest(target.manifest_result),
         backup=_to_run_report_backup(target.backup_result),
         error=target.error,
     )
+
+
+def _extract_target_manifest_counts(target: RunReportTargetInput) -> tuple[int, int]:
+    if target.included_count is not None or target.skipped_count is not None:
+        return (target.included_count or 0, target.skipped_count or 0)
+
+    if target.manifest_result is None:
+        return (0, 0)
+
+    included_count = sum(1 for decision in target.manifest_result.decisions if decision.include)
+    skipped_count = sum(1 for decision in target.manifest_result.decisions if not decision.include)
+    return (included_count, skipped_count)
 
 
 def _to_run_report_manifest(manifest_result: ManifestResult | None) -> RunReportManifest | None:
@@ -160,9 +193,27 @@ def _render_report_text(report: RunReport) -> str:
         f"status: {report.run.status}",
         f"started-at: {report.run.started_at}",
         f"finished-at: {report.run.finished_at or '-'}",
-        "",
-        "Events",
     ]
+
+    lines.extend(["", "Manifest"])
+    if report.manifest is None:
+        lines.append("- none")
+    else:
+        lines.append(f"manifest-file: {report.manifest.manifest_file_path}")
+        lines.append(f"json-manifest-file: {report.manifest.json_manifest_file_path}")
+        lines.append(f"summary-file: {report.manifest.summary_file_path}")
+
+    lines.extend(["", "Backup"])
+    if report.backup is None:
+        lines.append("- none")
+    else:
+        lines.append(f"snapshot-id: {report.backup.snapshot_id}")
+        lines.append(
+            "summary-payload: "
+            f"{json.dumps(report.backup.summary_payload, sort_keys=True)}"
+        )
+
+    lines.extend(["", "Events"])
 
     if not report.events:
         lines.append("- none")
@@ -183,6 +234,8 @@ def _render_report_text(report: RunReport) -> str:
             lines.append(f"  status: {target.status}")
             lines.append(f"  root-id: {target.root_id if target.root_id is not None else '-'}")
             lines.append(f"  root-path: {target.root_path or '-'}")
+            lines.append(f"  included-count: {target.included_count}")
+            lines.append(f"  skipped-count: {target.skipped_count}")
             lines.append(f"  error: {target.error or '-'}")
             if target.manifest is None:
                 lines.append("  manifest: -")
@@ -254,6 +307,14 @@ def _render_report_html(report: RunReport) -> str:
         "    </dl>\n"
         "  </section>\n"
         "  <section>\n"
+        "    <h2>Manifest</h2>\n"
+        f"    {_render_run_manifest_html(payload['manifest'])}\n"
+        "  </section>\n"
+        "  <section>\n"
+        "    <h2>Backup</h2>\n"
+        f"    {_render_run_backup_html(payload['backup'])}\n"
+        "  </section>\n"
+        "  <section>\n"
         "    <h2>Events</h2>\n"
         f"    <ul>{events_html or '<li>none</li>'}</ul>\n"
         "  </section>\n"
@@ -298,11 +359,37 @@ def _render_target_html(target: dict[str, object]) -> str:
         f"<dt>Status</dt><dd>{escape(str(target['status']))}</dd>"
         f"<dt>Root id</dt><dd>{escape(str(target['root_id']))}</dd>"
         f"<dt>Root path</dt><dd>{escape(str(target['root_path']))}</dd>"
+        f"<dt>Included count</dt><dd>{escape(str(target['included_count']))}</dd>"
+        f"<dt>Skipped count</dt><dd>{escape(str(target['skipped_count']))}</dd>"
         f"<dt>Error</dt><dd>{escape(str(target['error']))}</dd>"
         "</dl>"
         f"{manifest_html}"
         f"{backup_html}"
         "</article>"
+    )
+
+
+def _render_run_manifest_html(manifest: object) -> str:
+    if manifest is None:
+        return "<p>none</p>"
+    return (
+        "<dl>"
+        f"<dt>Manifest file</dt><dd>{escape(str(manifest['manifest_file_path']))}</dd>"
+        "<dt>JSON manifest file</dt>"
+        f"<dd>{escape(str(manifest['json_manifest_file_path']))}</dd>"
+        f"<dt>Summary file</dt><dd>{escape(str(manifest['summary_file_path']))}</dd>"
+        "</dl>"
+    )
+
+
+def _render_run_backup_html(backup: object) -> str:
+    if backup is None:
+        return "<p>none</p>"
+    return (
+        "<dl>"
+        f"<dt>Snapshot id</dt><dd>{escape(str(backup['snapshot_id']))}</dd>"
+        f"<dt>Summary payload</dt><dd>{_render_html_json_block(backup['summary_payload'])}</dd>"
+        "</dl>"
     )
 
 
@@ -316,6 +403,8 @@ def _to_report_payload(report: RunReport) -> dict[str, object]:
     return {
         "format_version": report.format_version,
         "run": asdict(report.run),
+        "manifest": asdict(report.manifest) if report.manifest is not None else None,
+        "backup": asdict(report.backup) if report.backup is not None else None,
         "events": [_event_to_payload(event) for event in report.events],
         "targets": [_target_to_payload(target) for target in report.targets],
     }
@@ -336,6 +425,8 @@ def _target_to_payload(target: RunReportTarget) -> dict[str, object]:
         "root_id": target.root_id,
         "root_path": target.root_path,
         "status": target.status,
+        "included_count": target.included_count,
+        "skipped_count": target.skipped_count,
         "manifest": asdict(target.manifest) if target.manifest is not None else None,
         "backup": asdict(target.backup) if target.backup is not None else None,
         "error": target.error,

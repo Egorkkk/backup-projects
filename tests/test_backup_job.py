@@ -43,9 +43,15 @@ def test_run_backup_job_happy_path_completes_and_writes_artifacts(
     engine = create_engine_from_config(config)
     session_factory = create_session_factory(engine)
 
+    backup_calls = []
+
     def fake_run_backup_from_manifest(request):
+        backup_calls.append(request)
         manifest_path = Path(request.manifest_result.manifest_file_path)
         assert manifest_path.is_file()
+        manifest_text = manifest_path.read_text(encoding="utf-8")
+        assert "show-a/edit.prproj" in manifest_text
+        assert "show-b/edit.prproj" in manifest_text
         return BackupServiceResult(
             manifest_result=request.manifest_result,
             restic_result=ResticBackupResult(
@@ -93,6 +99,32 @@ def test_run_backup_job_happy_path_completes_and_writes_artifacts(
                 scan_result=scan_result,
                 synced_at="2026-03-25T10:56:00+00:00",
             )
+            other_root = RootsRepository(session).create(
+                raid_name="raid_a",
+                name="show-b",
+                path=(tmp_path / "raid_a" / "show-b").as_posix(),
+                device_id=None,
+                inode=None,
+                mtime_ns=None,
+                ctime_ns=None,
+                first_seen_at="2026-03-25T10:55:00+00:00",
+                last_seen_at="2026-03-25T10:55:00+00:00",
+            )
+            (tmp_path / "raid_a" / "show-b").mkdir(parents=True, exist_ok=True)
+            ((tmp_path / "raid_a" / "show-b") / "edit.prproj").write_text(
+                "project",
+                encoding="utf-8",
+            )
+            other_scan_result = scan_root_structure(
+                root_path=other_root.path,
+                allowed_extensions=config.rules_config.allowed_extensions,
+            )
+            sync_structural_scan_result(
+                session=session,
+                root_id=other_root.id,
+                scan_result=other_scan_result,
+                synced_at="2026-03-25T10:56:30+00:00",
+            )
 
             result = run_backup_job(
                 session=session,
@@ -102,16 +134,21 @@ def test_run_backup_job_happy_path_completes_and_writes_artifacts(
 
             assert isinstance(result, BackupJobFinishedResult)
             assert result.run.status == "completed"
-            assert len(result.roots) == 1
-            assert result.roots[0].status == "completed"
-            assert result.roots[0].backup_result is not None
-            assert result.roots[0].backup_result.restic_result.snapshot_id == "snapshot-backup-1"
-            assert Path(result.roots[0].manifest_result.manifest_file_path).is_file()
+            assert len(backup_calls) == 1
+            assert result.backup_result is not None
+            assert result.backup_result.restic_result is not None
+            assert result.backup_result.restic_result.snapshot_id == "snapshot-backup-1"
+            assert result.manifest_result is not None
+            assert Path(result.manifest_result.manifest_file_path).is_file()
+            assert len(result.roots) == 2
+            assert all(root_result.status == "completed" for root_result in result.roots)
+            assert all(root_result.backup_result is None for root_result in result.roots)
+            assert {root_result.included_count for root_result in result.roots} == {1}
             assert Path(result.report.json_report_path).is_file()
             assert Path(result.report.text_report_path).is_file()
             assert Path(result.report.html_report_path).is_file()
             assert Path(result.log_file_path).is_file()
-            assert result.summary.targets_total == 1
+            assert result.summary.targets_total == 2
     finally:
         engine.dispose()
 
@@ -163,10 +200,133 @@ def test_run_backup_job_zero_active_roots_returns_completed_result(tmp_path: Pat
 
             assert isinstance(result, BackupJobFinishedResult)
             assert result.run.status == "completed"
+            assert result.manifest_result is None
+            assert result.backup_result is None
             assert result.roots == ()
             assert result.summary.targets_total == 0
             assert Path(result.report.json_report_path).is_file()
             assert Path(result.log_file_path).is_file()
+    finally:
+        engine.dispose()
+
+
+def test_run_backup_job_partial_failure_still_runs_single_combined_backup(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    app_path, rules_path = _write_config_files(tmp_path)
+    show_root_a = tmp_path / "raid_a" / "show-a"
+    show_root_a.mkdir(parents=True, exist_ok=True)
+    (show_root_a / "edit.prproj").write_text("project", encoding="utf-8")
+    show_root_b = tmp_path / "raid_a" / "show-b"
+    show_root_b.mkdir(parents=True, exist_ok=True)
+    (show_root_b / "edit.prproj").write_text("project", encoding="utf-8")
+
+    config = load_config(app_path=app_path, rules_path=rules_path)
+    _prepare_runtime_dirs(config=config)
+    initialize_database(config)
+
+    engine = create_engine_from_config(config)
+    session_factory = create_session_factory(engine)
+    backup_calls = []
+
+    original_build_multi_root_dry_run_manifest = backup_job_module.build_multi_root_dry_run_manifest
+
+    def fake_build_multi_root_dry_run_manifest(*, session, root_ids):
+        plan = original_build_multi_root_dry_run_manifest(session=session, root_ids=root_ids)
+        adjusted_root_plans = []
+        for root_plan in plan.root_plans:
+            root = RootsRepository(session).get_by_id(root_plan.root_id)
+            assert root is not None
+            if root.name == "show-b":
+                adjusted_root_plans.append(
+                    type(root_plan)(
+                        root_id=root_plan.root_id,
+                        status="failed",
+                        error="manifest planning failed for show-b",
+                    )
+                )
+                continue
+            adjusted_root_plans.append(root_plan)
+        return type(plan)(
+            root_plans=tuple(adjusted_root_plans),
+            built_manifest=adjusted_root_plans[0].built_manifest,
+        )
+
+    def fake_run_backup_from_manifest(request):
+        backup_calls.append(request)
+        return BackupServiceResult(
+            manifest_result=request.manifest_result,
+            restic_result=ResticBackupResult(
+                manifest_file_path=request.manifest_result.manifest_file_path,
+                snapshot_id="snapshot-backup-partial",
+                summary_payload={
+                    "message_type": "summary",
+                    "snapshot_id": "snapshot-backup-partial",
+                    "files_new": 1,
+                    "files_changed": 0,
+                },
+                argv=("restic", "backup"),
+                stdout="",
+                stderr="",
+                duration_seconds=0.1,
+            ),
+        )
+
+    monkeypatch.setattr(
+        backup_job_module,
+        "build_multi_root_dry_run_manifest",
+        fake_build_multi_root_dry_run_manifest,
+    )
+    monkeypatch.setattr(
+        backup_job_module,
+        "run_backup_from_manifest",
+        fake_run_backup_from_manifest,
+    )
+
+    try:
+        with session_scope(session_factory) as session:
+            for show_root in (show_root_a, show_root_b):
+                root = RootsRepository(session).create(
+                    raid_name="raid_a",
+                    name=show_root.name,
+                    path=show_root.as_posix(),
+                    device_id=None,
+                    inode=None,
+                    mtime_ns=None,
+                    ctime_ns=None,
+                    first_seen_at="2026-03-25T10:55:00+00:00",
+                    last_seen_at="2026-03-25T10:55:00+00:00",
+                )
+                scan_result = scan_root_structure(
+                    root_path=root.path,
+                    allowed_extensions=config.rules_config.allowed_extensions,
+                )
+                sync_structural_scan_result(
+                    session=session,
+                    root_id=root.id,
+                    scan_result=scan_result,
+                    synced_at="2026-03-25T10:56:00+00:00",
+                )
+
+            result = run_backup_job(
+                session=session,
+                config=config,
+                now=lambda: datetime(2026, 3, 25, 11, 15, tzinfo=timezone.utc),
+            )
+
+            assert isinstance(result, BackupJobFinishedResult)
+            assert result.run.status == "failed"
+            assert len(backup_calls) == 1
+            assert result.backup_result is not None
+            assert result.backup_result.restic_result is not None
+            assert result.backup_result.restic_result.snapshot_id == "snapshot-backup-partial"
+            failed_root = next(root for root in result.roots if root.status == "failed")
+            completed_root = next(root for root in result.roots if root.status == "completed")
+            assert failed_root.error == "manifest planning failed for show-b"
+            assert completed_root.included_count == 1
+            assert result.summary.targets_failed == 1
+            assert result.summary.targets_succeeded == 1
     finally:
         engine.dispose()
 

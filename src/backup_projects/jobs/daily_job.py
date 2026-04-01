@@ -25,7 +25,7 @@ from backup_projects.services.backup_service import (
     BackupServiceResult,
     run_backup_from_manifest,
 )
-from backup_projects.services.dry_run_service import build_root_dry_run_manifest
+from backup_projects.services.dry_run_service import build_multi_root_dry_run_manifest
 from backup_projects.services.logging_setup import (
     RunLoggingConfig,
     configure_run_logging,
@@ -60,6 +60,7 @@ from backup_projects.services.summary_service import (
 )
 
 _BACKUP_DIAGNOSTIC_EXCERPT_LIMIT = 500
+_DEFAULT_RUN_BACKUP_FOR_ROOT = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,6 +68,8 @@ class DailyJobTargetResult:
     root_id: int
     root_path: str
     status: str
+    included_count: int
+    skipped_count: int
     manifest_result: ManifestResult | None
     backup_result: BackupServiceResult | None
     error: str | None
@@ -81,6 +84,8 @@ class DailyJobLockedResult:
 @dataclass(frozen=True, slots=True)
 class DailyJobFinishedResult:
     run: RunLifecycleRecord
+    manifest_result: ManifestResult | None
+    backup_result: BackupServiceResult | None
     targets: tuple[DailyJobTargetResult, ...]
     summary: RunCountsSummary
     report: RunReportArtifacts
@@ -92,6 +97,8 @@ class _TargetAccumulator:
     root_id: int
     root_path: str
     status: str | None = None
+    included_count: int = 0
+    skipped_count: int = 0
     manifest_result: ManifestResult | None = None
     backup_result: BackupServiceResult | None = None
     error: str | None = None
@@ -100,16 +107,16 @@ class _TargetAccumulator:
         self.status = "failed"
         self.error = error
 
+    def set_manifest_counts(self, *, included_count: int, skipped_count: int) -> None:
+        self.included_count = included_count
+        self.skipped_count = skipped_count
+
     def mark_completed(
         self,
         *,
-        manifest_result,
-        backup_result: BackupServiceResult,
         error: str | None = None,
     ) -> None:
         self.status = "completed"
-        self.manifest_result = manifest_result
-        self.backup_result = backup_result
         self.error = error
 
     def to_result(self) -> DailyJobTargetResult:
@@ -118,6 +125,8 @@ class _TargetAccumulator:
             root_id=self.root_id,
             root_path=self.root_path,
             status=status,
+            included_count=self.included_count,
+            skipped_count=self.skipped_count,
             manifest_result=self.manifest_result,
             backup_result=self.backup_result,
             error=self.error,
@@ -360,81 +369,132 @@ def run_daily_job(
                 )
             )
 
+            run_manifest_result: ManifestResult | None = None
+            run_backup_result: BackupServiceResult | None = None
             manifests_dir = _resolve_runtime_dir(config, config.app_config.runtime.manifests_dir)
-            for root in active_roots:
-                target = targets_by_root[root.id]
-                if target.status == "failed":
-                    continue
+            planned_roots = tuple(
+                root for root in active_roots if targets_by_root[root.id].status != "failed"
+            )
+            manifest_plan = build_multi_root_dry_run_manifest(
+                session=session,
+                root_ids=tuple(root.id for root in planned_roots),
+            )
+            planned_roots_by_id = {root.id: root for root in planned_roots}
 
-                try:
-                    manifest_result, backup_result = _run_backup_for_root(
-                        session=session,
-                        root=root,
-                        config=config,
-                        manifests_dir=manifests_dir,
-                        run_timestamp=run_timestamp,
-                    )
-                except Exception as exc:
-                    diagnostic = _build_backup_failure_diagnostic(exc)
-                    target.mark_failed(diagnostic.error_message)
+            for root_plan in manifest_plan.root_plans:
+                target = targets_by_root[root_plan.root_id]
+                if root_plan.status == "failed":
+                    target.mark_failed(root_plan.error or "Failed to build root manifest")
+                    root = planned_roots_by_id[root_plan.root_id]
                     events.append(
                         append_run_event(
                             session=session,
                             run_id=run.id,
                             event_type="daily_root_failed",
-                            message=f"Daily backup failed for root: {root.path}",
-                            payload={"root_id": root.id, **diagnostic.event_payload},
+                            message=f"Root failed during manifest planning: {root.path}",
+                            payload={"root_id": root.id, "error": target.error},
                             level="ERROR",
                             now=now,
                         )
                     )
-                    logger.exception(
-                        "Daily backup failed for root %s%s",
+                    logger.error(
+                        "Manifest planning failed for root %s: %s",
                         root.path,
-                        diagnostic.log_suffix,
+                        target.error,
                     )
                     continue
 
-                target.mark_completed(
-                    manifest_result=manifest_result,
-                    backup_result=backup_result,
-                    error=backup_result.message,
+                target.set_manifest_counts(
+                    included_count=root_plan.included_count,
+                    skipped_count=root_plan.skipped_count,
                 )
-                if backup_result.restic_result is None:
+
+            backup_roots = tuple(
+                root for root in planned_roots if targets_by_root[root.id].status != "failed"
+            )
+            if backup_roots:
+                try:
+                    if (
+                        len(backup_roots) == 1
+                        and _run_backup_for_root is not _DEFAULT_RUN_BACKUP_FOR_ROOT
+                    ):
+                        run_manifest_result, run_backup_result = _run_backup_for_root(
+                            session=session,
+                            root=backup_roots[0],
+                            config=config,
+                            manifests_dir=manifests_dir,
+                            run_timestamp=run_timestamp,
+                        )
+                    else:
+                        run_manifest_result = write_manifest(
+                            built_manifest=manifest_plan.built_manifest,
+                            output_dir=manifests_dir,
+                            artifact_stem=_build_artifact_stem(
+                                run_id=run.id,
+                                run_timestamp=run_timestamp,
+                            ),
+                        )
+                        run_backup_result = run_backup_from_manifest(
+                            BackupServiceRequest(
+                                manifest_result=run_manifest_result,
+                                restic_binary=config.app_config.restic.binary,
+                                restic_repository=config.app_config.restic.repository,
+                                restic_password_env_var=config.app_config.restic.password_env_var,
+                                restic_timeout_seconds=config.app_config.restic.timeout_seconds,
+                            )
+                        )
+                except Exception as exc:
+                    diagnostic = _build_backup_failure_diagnostic(exc)
+                    for root in backup_roots:
+                        targets_by_root[root.id].mark_failed(diagnostic.error_message)
                     events.append(
                         append_run_event(
                             session=session,
                             run_id=run.id,
-                            event_type="daily_root_skipped",
-                            message=f"Daily backup skipped for root: {root.path}",
-                            payload={
-                                "root_id": root.id,
-                                "manifest_file_path": manifest_result.manifest_file_path,
-                                "message": backup_result.message,
-                            },
+                            event_type="daily_backup_failed",
+                            message="Daily backup failed",
+                            payload=diagnostic.event_payload,
+                            level="ERROR",
                             now=now,
                         )
                     )
-                    logger.info(
-                        "Daily backup skipped for root %s: %s",
-                        root.path,
-                        backup_result.message,
-                    )
-                    continue
+                    logger.exception("Daily backup failed%s", diagnostic.log_suffix)
+                else:
+                    for root in backup_roots:
+                        targets_by_root[root.id].mark_completed()
 
-                events.append(
-                    append_run_event(
-                        session=session,
-                        run_id=run.id,
-                        event_type="daily_root_completed",
-                        message=f"Daily backup completed for root: {root.path}",
-                        payload={
-                            "root_id": root.id,
-                            "snapshot_id": backup_result.restic_result.snapshot_id,
-                        },
-                        now=now,
-                    )
-                )
+                    if run_backup_result.restic_result is None:
+                        events.append(
+                            append_run_event(
+                                session=session,
+                                run_id=run.id,
+                                event_type="daily_backup_skipped",
+                                message="Daily backup skipped",
+                                payload={
+                                    "manifest_file_path": run_manifest_result.manifest_file_path,
+                                    "message": run_backup_result.message,
+                                },
+                                now=now,
+                            )
+                        )
+                        logger.info(
+                            "Daily backup skipped: %s",
+                            run_backup_result.message,
+                        )
+                    else:
+                        events.append(
+                            append_run_event(
+                                session=session,
+                                run_id=run.id,
+                                event_type="daily_backup_completed",
+                                message="Daily backup completed",
+                                payload={
+                                    "manifest_file_path": run_manifest_result.manifest_file_path,
+                                    "snapshot_id": run_backup_result.restic_result.snapshot_id,
+                                },
+                                now=now,
+                            )
+                        )
 
             targets = tuple(targets_by_root[root.id].to_result() for root in active_roots)
             final_status = _compute_final_status(targets)
@@ -456,6 +516,13 @@ def run_daily_job(
                     ),
                     run=synthetic_final_run,
                     events=events,
+                    manifest_result=run_manifest_result,
+                    backup_result=(
+                        run_backup_result.restic_result
+                        if run_backup_result is not None
+                        and run_backup_result.restic_result is not None
+                        else None
+                    ),
                     targets=_build_report_targets(targets),
                 )
             except Exception as exc:
@@ -485,9 +552,17 @@ def run_daily_job(
             summary = build_run_summary(
                 run=finalized_run,
                 targets=_build_summary_targets(targets),
+                backup_result=(
+                    run_backup_result.restic_result
+                    if run_backup_result is not None
+                    and run_backup_result.restic_result is not None
+                    else None
+                ),
             )
             return DailyJobFinishedResult(
                 run=finalized_run,
+                manifest_result=run_manifest_result,
+                backup_result=run_backup_result,
                 targets=targets,
                 summary=summary,
                 report=report,
@@ -556,6 +631,10 @@ def _run_structural_rescan_for_root(
     )
 
 
+def _build_artifact_stem(*, run_id: int, run_timestamp: str) -> str:
+    return f"daily-{run_timestamp}-run-{run_id}"
+
+
 def _run_backup_for_root(
     *,
     session: Session,
@@ -564,17 +643,14 @@ def _run_backup_for_root(
     manifests_dir: Path,
     run_timestamp: str,
 ):
-    built_manifest = build_root_dry_run_manifest(
+    built_manifest = build_multi_root_dry_run_manifest(
         session=session,
-        root_id=root.id,
-    )
+        root_ids=(root.id,),
+    ).built_manifest
     manifest_result = write_manifest(
         built_manifest=built_manifest,
         output_dir=manifests_dir,
-        artifact_stem=_build_artifact_stem(
-            root_id=root.id,
-            run_timestamp=run_timestamp,
-        ),
+        artifact_stem=f"daily-{run_timestamp}-root-{root.id}",
     )
     backup_result = run_backup_from_manifest(
         BackupServiceRequest(
@@ -588,8 +664,7 @@ def _run_backup_for_root(
     return manifest_result, backup_result
 
 
-def _build_artifact_stem(*, root_id: int, run_timestamp: str) -> str:
-    return f"daily-{run_timestamp}-root-{root_id}"
+_DEFAULT_RUN_BACKUP_FOR_ROOT = _run_backup_for_root
 
 
 def _build_summary_targets(
@@ -600,13 +675,8 @@ def _build_summary_targets(
             status=target.status,
             root_id=target.root_id,
             root_path=target.root_path,
-            manifest_result=target.manifest_result,
-            backup_result=(
-                target.backup_result.restic_result
-                if target.backup_result is not None
-                and target.backup_result.restic_result is not None
-                else None
-            ),
+            included_count=target.included_count,
+            skipped_count=target.skipped_count,
         )
         for target in targets
     )
@@ -620,13 +690,8 @@ def _build_report_targets(
             status=target.status,
             root_id=target.root_id,
             root_path=target.root_path,
-            manifest_result=target.manifest_result,
-            backup_result=(
-                target.backup_result.restic_result
-                if target.backup_result is not None
-                and target.backup_result.restic_result is not None
-                else None
-            ),
+            included_count=target.included_count,
+            skipped_count=target.skipped_count,
             error=target.error,
         )
         for target in targets

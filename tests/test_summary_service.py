@@ -157,6 +157,36 @@ def test_build_run_summary_excludes_raw_process_and_report_payloads() -> None:
     assert not hasattr(summary.targets[0], "argv")
 
 
+def test_build_run_summary_uses_run_level_backup_counts_when_provided() -> None:
+    summary = build_run_summary(
+        run=_make_run_record(),
+        targets=(
+            RunSummaryTargetInput(
+                root_id=1,
+                root_path="/mnt/raid_a/show-a",
+                status="completed",
+                included_count=2,
+                skipped_count=1,
+            ),
+            RunSummaryTargetInput(
+                root_id=2,
+                root_path="/mnt/raid_b/show-b",
+                status="completed",
+                included_count=3,
+                skipped_count=0,
+            ),
+        ),
+        backup_result=_make_backup_result(files_new=5, files_changed=2),
+    )
+
+    assert summary.included_count == 5
+    assert summary.skipped_count == 1
+    assert summary.new_count == 5
+    assert summary.changed_count == 2
+    assert summary.targets[0].new_count is None
+    assert summary.targets[1].new_count is None
+
+
 def _make_run_record() -> RunLifecycleRecord:
     return RunLifecycleRecord(
         id=42,

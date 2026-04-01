@@ -15,13 +15,15 @@ def test_build_run_report_collects_run_events_and_targets() -> None:
     report = build_run_report(
         run=_make_run_record(),
         events=(_make_run_event(),),
+        manifest_result=_make_manifest_result(),
+        backup_result=_make_backup_result(),
         targets=(
             RunReportTargetInput(
                 root_id=1,
                 root_path="/mnt/raid_a/show-a",
                 status="completed",
-                manifest_result=_make_manifest_result(),
-                backup_result=_make_backup_result(),
+                included_count=1,
+                skipped_count=0,
             ),
         ),
     )
@@ -31,14 +33,18 @@ def test_build_run_report_collects_run_events_and_targets() -> None:
     assert report.run.run_type == "daily"
     assert len(report.events) == 1
     assert report.events[0].event_type == "manifest_built"
+    assert report.manifest is not None
+    assert report.manifest.manifest_file_path == "/runtime/manifests/run.manifest.txt"
+    assert report.backup is not None
+    assert report.backup.snapshot_id == "snapshot-123"
     assert len(report.targets) == 1
     assert report.targets[0].root_id == 1
     assert report.targets[0].root_path == "/mnt/raid_a/show-a"
     assert report.targets[0].status == "completed"
-    assert report.targets[0].manifest is not None
-    assert report.targets[0].manifest.manifest_file_path == "/runtime/manifests/run.manifest.txt"
-    assert report.targets[0].backup is not None
-    assert report.targets[0].backup.snapshot_id == "snapshot-123"
+    assert report.targets[0].included_count == 1
+    assert report.targets[0].skipped_count == 0
+    assert report.targets[0].manifest is None
+    assert report.targets[0].backup is None
 
 
 def test_write_run_report_writes_canonical_json_without_raw_process_fields(
@@ -51,13 +57,15 @@ def test_write_run_report_writes_canonical_json_without_raw_process_fields(
         reports_dir=reports_dir,
         run=_make_run_record(),
         events=(_make_run_event(),),
+        manifest_result=_make_manifest_result(),
+        backup_result=_make_backup_result(),
         targets=(
             RunReportTargetInput(
                 root_id=1,
                 root_path="/mnt/raid_a/show-a",
                 status="completed",
-                manifest_result=_make_manifest_result(),
-                backup_result=_make_backup_result(),
+                included_count=1,
+                skipped_count=0,
             ),
         ),
     )
@@ -68,7 +76,27 @@ def test_write_run_report_writes_canonical_json_without_raw_process_fields(
 
     assert payload["format_version"] == 1
     assert payload["run"]["id"] == 42
-    assert set(payload) == {"format_version", "run", "events", "targets"}
+    assert set(payload) == {
+        "format_version",
+        "run",
+        "manifest",
+        "backup",
+        "events",
+        "targets",
+    }
+    assert payload["manifest"] == {
+        "manifest_file_path": "/runtime/manifests/run.manifest.txt",
+        "json_manifest_file_path": "/runtime/manifests/run.manifest.json",
+        "summary_file_path": "/runtime/manifests/run.summary.txt",
+    }
+    assert payload["backup"] == {
+        "snapshot_id": "snapshot-123",
+        "summary_payload": {
+            "files_new": 2,
+            "message_type": "summary",
+            "snapshot_id": "snapshot-123",
+        },
+    }
     assert payload["events"][0] == {
         "event_time": "2026-03-17T10:01:00+00:00",
         "level": "INFO",
@@ -78,23 +106,10 @@ def test_write_run_report_writes_canonical_json_without_raw_process_fields(
     }
     assert "id" not in payload["events"][0]
     assert "run_id" not in payload["events"][0]
-    assert payload["targets"][0]["manifest"] == {
-        "manifest_file_path": "/runtime/manifests/run.manifest.txt",
-        "json_manifest_file_path": "/runtime/manifests/run.manifest.json",
-        "summary_file_path": "/runtime/manifests/run.summary.txt",
-    }
-    assert payload["targets"][0]["backup"] == {
-        "snapshot_id": "snapshot-123",
-        "summary_payload": {
-            "files_new": 2,
-            "message_type": "summary",
-            "snapshot_id": "snapshot-123",
-        },
-    }
-    assert "stdout" not in payload["targets"][0]["backup"]
-    assert "stderr" not in payload["targets"][0]["backup"]
-    assert "argv" not in payload["targets"][0]["backup"]
-    assert "duration_seconds" not in payload["targets"][0]["backup"]
+    assert payload["targets"][0]["included_count"] == 1
+    assert payload["targets"][0]["skipped_count"] == 0
+    assert payload["targets"][0]["manifest"] is None
+    assert payload["targets"][0]["backup"] is None
 
 
 def test_write_run_report_uses_deterministic_paths_for_all_renderers(tmp_path: Path) -> None:
@@ -127,21 +142,27 @@ def test_write_run_report_writes_human_readable_text_report(tmp_path: Path) -> N
                 root_id=1,
                 root_path="/mnt/raid_a/show-a",
                 status="completed",
-                manifest_result=_make_manifest_result(),
-                backup_result=_make_backup_result(),
+                included_count=2,
+                skipped_count=1,
             ),
         ),
+        manifest_result=_make_manifest_result(),
+        backup_result=_make_backup_result(),
     )
 
     text_report = Path(artifacts.text_report_path).read_text(encoding="utf-8")
 
     assert "Run report" in text_report
     assert "Run" in text_report
+    assert "Manifest" in text_report
+    assert "Backup" in text_report
     assert "Events" in text_report
     assert "Targets" in text_report
     assert "manifest_built" in text_report
     assert "snapshot-id: snapshot-123" in text_report
     assert "root-path: /mnt/raid_a/show-a" in text_report
+    assert "included-count: 2" in text_report
+    assert "skipped-count: 1" in text_report
 
 
 def test_write_run_report_writes_static_html_export(tmp_path: Path) -> None:
@@ -160,6 +181,8 @@ def test_write_run_report_writes_static_html_export(tmp_path: Path) -> None:
     assert "<!DOCTYPE html>" in html_report
     assert "<html" in html_report
     assert "Run report #42" in html_report
+    assert "<h2>Manifest</h2>" in html_report
+    assert "<h2>Backup</h2>" in html_report
     assert "<h2>Events</h2>" in html_report
     assert "<h2>Targets</h2>" in html_report
 
@@ -182,9 +205,11 @@ def test_write_run_report_handles_missing_optional_sections(tmp_path: Path) -> N
         {
             "backup": None,
             "error": "backup failed",
+            "included_count": 0,
             "manifest": None,
             "root_id": None,
             "root_path": None,
+            "skipped_count": 0,
             "status": "failed",
         }
     ]

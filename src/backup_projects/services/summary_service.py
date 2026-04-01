@@ -15,6 +15,8 @@ class RunSummaryTargetInput:
     root_path: str | None = None
     manifest_result: ManifestResult | None = None
     backup_result: ResticBackupResult | None = None
+    included_count: int | None = None
+    skipped_count: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,6 +49,7 @@ def build_run_summary(
     *,
     run: RunLifecycleRecord,
     targets: Iterable[RunSummaryTargetInput],
+    backup_result: ResticBackupResult | None = None,
 ) -> RunCountsSummary:
     target_summaries = tuple(_build_target_summary(target) for target in targets)
 
@@ -56,8 +59,18 @@ def build_run_summary(
         status=run.status,
         included_count=sum(summary.included_count for summary in target_summaries),
         skipped_count=sum(summary.skipped_count for summary in target_summaries),
-        new_count=_aggregate_optional_counts(target_summaries, field_name="new_count"),
-        changed_count=_aggregate_optional_counts(target_summaries, field_name="changed_count"),
+        new_count=_build_top_level_backup_count(
+            backup_result=backup_result,
+            targets=target_summaries,
+            key="files_new",
+            field_name="new_count",
+        ),
+        changed_count=_build_top_level_backup_count(
+            backup_result=backup_result,
+            targets=target_summaries,
+            key="files_changed",
+            field_name="changed_count",
+        ),
         targets_total=len(target_summaries),
         targets_succeeded=sum(1 for summary in target_summaries if _is_target_success(summary)),
         targets_failed=sum(1 for summary in target_summaries if _is_target_failure(summary)),
@@ -66,7 +79,11 @@ def build_run_summary(
 
 
 def _build_target_summary(target: RunSummaryTargetInput) -> RunTargetSummary:
-    included_count, skipped_count = _extract_manifest_counts(target.manifest_result)
+    included_count, skipped_count = _extract_manifest_counts(
+        target.manifest_result,
+        included_count=target.included_count,
+        skipped_count=target.skipped_count,
+    )
     new_count = _extract_backup_count(target.backup_result, key="files_new")
     changed_count = _extract_backup_count(target.backup_result, key="files_changed")
 
@@ -81,7 +98,15 @@ def _build_target_summary(target: RunSummaryTargetInput) -> RunTargetSummary:
     )
 
 
-def _extract_manifest_counts(manifest_result: ManifestResult | None) -> tuple[int, int]:
+def _extract_manifest_counts(
+    manifest_result: ManifestResult | None,
+    *,
+    included_count: int | None,
+    skipped_count: int | None,
+) -> tuple[int, int]:
+    if included_count is not None or skipped_count is not None:
+        return (included_count or 0, skipped_count or 0)
+
     if manifest_result is None:
         return (0, 0)
 
@@ -118,6 +143,18 @@ def _aggregate_optional_counts(
             return None
         values.append(value)
     return sum(values)
+
+
+def _build_top_level_backup_count(
+    *,
+    backup_result: ResticBackupResult | None,
+    targets: tuple[RunTargetSummary, ...],
+    key: str,
+    field_name: str,
+) -> int | None:
+    if backup_result is not None:
+        return _extract_backup_count(backup_result, key=key)
+    return _aggregate_optional_counts(targets, field_name=field_name)
 
 
 def _is_target_success(target: RunTargetSummary) -> bool:

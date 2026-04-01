@@ -78,21 +78,29 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _print_finished_result(result: DailyJobFinishedResult) -> None:
+    _print_run_artifacts(
+        manifest_result=result.manifest_result,
+        snapshot_id=(
+            result.backup_result.restic_result.snapshot_id
+            if result.backup_result is not None
+            and result.backup_result.restic_result is not None
+            else None
+        ),
+        backup_note=(
+            result.backup_result.message
+            if result.backup_result is not None
+            else None
+        ),
+    )
+
     for target in result.targets:
-        if target.status == "completed":
-            _print_root_success(
-                root_id=target.root_id,
-                root_path=target.root_path,
-                manifest_result=target.manifest_result,
-                snapshot_id=(
-                    target.backup_result.restic_result.snapshot_id
-                    if target.backup_result is not None
-                    and target.backup_result.restic_result is not None
-                    else None
-                ),
-                backup_note=target.error,
-            )
-            continue
+        _print_root_result(
+            root_id=target.root_id,
+            root_path=target.root_path,
+            status=target.status,
+            included_count=target.included_count,
+            skipped_count=target.skipped_count,
+        )
 
         if target.error is not None:
             print(target.error, file=sys.stderr)
@@ -104,16 +112,15 @@ def _print_finished_result(result: DailyJobFinishedResult) -> None:
     )
 
 
-def _print_root_success(
+def _print_run_artifacts(
     *,
-    root_id: int,
-    root_path: str,
     manifest_result,
     snapshot_id: str | None,
     backup_note: str | None = None,
 ) -> None:
-    print(f"Daily backup root-id: {root_id}")
-    print(f"root-path: {root_path}")
+    if manifest_result is None:
+        return
+    print("Daily backup run")
     print(f"manifest-file: {manifest_result.manifest_file_path}")
     print(f"json-manifest-file: {manifest_result.json_manifest_file_path}")
     print(f"summary-file: {manifest_result.summary_file_path}")
@@ -121,6 +128,22 @@ def _print_root_success(
         print(f"snapshot-id: {snapshot_id}")
     elif backup_note is not None:
         print(f"backup-note: {backup_note}")
+    print()
+
+
+def _print_root_result(
+    *,
+    root_id: int,
+    root_path: str,
+    status: str,
+    included_count: int,
+    skipped_count: int,
+) -> None:
+    print(f"Daily backup root-id: {root_id}")
+    print(f"root-path: {root_path}")
+    print(f"status: {status}")
+    print(f"included-count: {included_count}")
+    print(f"skipped-count: {skipped_count}")
     print()
 
 

@@ -19,6 +19,15 @@ def _make_finished_result(*, status: str, targets: tuple[DailyJobTargetResult, .
             trigger_mode="cron",
             finished_at="2026-03-20T10:10:00+00:00",
         ),
+        manifest_result=SimpleNamespace(
+            manifest_file_path="/tmp/manifests/daily-20260317T081500Z-run-41.manifest.txt",
+            json_manifest_file_path="/tmp/manifests/daily-20260317T081500Z-run-41.manifest.json",
+            summary_file_path="/tmp/manifests/daily-20260317T081500Z-run-41.summary.txt",
+        ),
+        backup_result=SimpleNamespace(
+            restic_result=SimpleNamespace(snapshot_id="snapshot-run-41"),
+            message=None,
+        ),
         targets=targets,
         summary=RunCountsSummary(
             run_id=41,
@@ -59,28 +68,20 @@ def test_run_daily_prints_finished_job_result(monkeypatch, capsys) -> None:
                 root_id=2,
                 root_path="/mnt/raid_a/projects/show-b",
                 status="completed",
-                manifest_result=SimpleNamespace(
-                    manifest_file_path="/tmp/manifests/daily-20260317T081500Z-root-2.manifest.txt",
-                    json_manifest_file_path="/tmp/manifests/daily-20260317T081500Z-root-2.manifest.json",
-                    summary_file_path="/tmp/manifests/daily-20260317T081500Z-root-2.summary.txt",
-                ),
-                backup_result=SimpleNamespace(
-                    restic_result=SimpleNamespace(snapshot_id="snapshot-b")
-                ),
+                included_count=2,
+                skipped_count=1,
+                manifest_result=None,
+                backup_result=None,
                 error=None,
             ),
             DailyJobTargetResult(
                 root_id=1,
                 root_path="/mnt/raid_a/projects/show-a",
                 status="completed",
-                manifest_result=SimpleNamespace(
-                    manifest_file_path="/tmp/manifests/daily-20260317T081500Z-root-1.manifest.txt",
-                    json_manifest_file_path="/tmp/manifests/daily-20260317T081500Z-root-1.manifest.json",
-                    summary_file_path="/tmp/manifests/daily-20260317T081500Z-root-1.summary.txt",
-                ),
-                backup_result=SimpleNamespace(
-                    restic_result=SimpleNamespace(snapshot_id="snapshot-a")
-                ),
+                included_count=1,
+                skipped_count=0,
+                manifest_result=None,
+                backup_result=None,
                 error=None,
             ),
         ),
@@ -108,13 +109,14 @@ def test_run_daily_prints_finished_job_result(monkeypatch, capsys) -> None:
 
     captured = capsys.readouterr()
     assert exit_code == 0
+    assert "Daily backup run" in captured.out
+    assert "manifest-file: /tmp/manifests/daily-20260317T081500Z-run-41.manifest.txt" in captured.out
+    assert "snapshot-id: snapshot-run-41" in captured.out
     assert captured.out.index("Daily backup root-id: 2") < captured.out.index(
         "Daily backup root-id: 1"
     )
-    assert "manifest-file: /tmp/manifests/daily-20260317T081500Z-root-2.manifest.txt" in captured.out
-    assert "snapshot-id: snapshot-b" in captured.out
-    assert "manifest-file: /tmp/manifests/daily-20260317T081500Z-root-1.manifest.txt" in captured.out
-    assert "snapshot-id: snapshot-a" in captured.out
+    assert "included-count: 2" in captured.out
+    assert "skipped-count: 1" in captured.out
     assert "Daily run summary" in captured.out
     assert "roots-total: 2" in captured.out
     assert "roots-succeeded: 2" in captured.out
@@ -132,15 +134,17 @@ def test_run_daily_prints_backup_note_for_completed_empty_manifest(monkeypatch, 
                 root_id=3,
                 root_path="/mnt/raid_a/projects/show-empty",
                 status="completed",
-                manifest_result=SimpleNamespace(
-                    manifest_file_path="/tmp/manifests/daily-root-3.manifest.txt",
-                    json_manifest_file_path="/tmp/manifests/daily-root-3.manifest.json",
-                    summary_file_path="/tmp/manifests/daily-root-3.summary.txt",
-                ),
-                backup_result=SimpleNamespace(restic_result=None),
-                error="Backup skipped: manifest include set is empty",
+                included_count=0,
+                skipped_count=0,
+                manifest_result=None,
+                backup_result=None,
+                error=None,
             ),
         ),
+    )
+    result.backup_result = SimpleNamespace(
+        restic_result=None,
+        message="Backup skipped: manifest include set is empty",
     )
 
     class FakeEngine:
@@ -222,6 +226,8 @@ def test_run_daily_maps_failed_job_result_to_exit_code_1(monkeypatch, capsys) ->
                 root_id=1,
                 root_path="/mnt/raid_a/projects/show-a",
                 status="failed",
+                included_count=0,
+                skipped_count=0,
                 manifest_result=None,
                 backup_result=None,
                 error="backup failed for root 1",
@@ -230,14 +236,10 @@ def test_run_daily_maps_failed_job_result_to_exit_code_1(monkeypatch, capsys) ->
                 root_id=2,
                 root_path="/mnt/raid_a/projects/show-b",
                 status="completed",
-                manifest_result=SimpleNamespace(
-                    manifest_file_path="/tmp/manifests/daily-20260317T081500Z-root-2.manifest.txt",
-                    json_manifest_file_path="/tmp/manifests/daily-20260317T081500Z-root-2.manifest.json",
-                    summary_file_path="/tmp/manifests/daily-20260317T081500Z-root-2.summary.txt",
-                ),
-                backup_result=SimpleNamespace(
-                    restic_result=SimpleNamespace(snapshot_id="snapshot-b")
-                ),
+                included_count=1,
+                skipped_count=0,
+                manifest_result=None,
+                backup_result=None,
                 error=None,
             ),
         ),
