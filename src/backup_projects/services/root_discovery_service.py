@@ -49,7 +49,9 @@ def discover_and_sync_roots(
     discovered_at: str,
 ) -> RootDiscoveryResult:
     repo = RootsRepository(session)
-    existing_roots = repo.list_all()
+    existing_roots = [
+        record for record in repo.list_all() if record.raid_name == raid_name
+    ]
     existing_by_path = {record.path: record for record in existing_roots}
     discovered_candidates = list_root_directories(raid_path)
 

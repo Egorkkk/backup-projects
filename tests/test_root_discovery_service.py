@@ -282,3 +282,100 @@ def test_discover_and_sync_roots_skips_disappeared_child_after_listing_race(
     assert result.created == ()
     assert result.marked_missing == ()
     assert RootsRepository(db_session).list_all() == []
+
+
+def test_discover_and_sync_roots_keeps_other_raid_roots_active_across_multiple_passes(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    repo = RootsRepository(db_session)
+    raid_a_path = tmp_path / "raid_a"
+    raid_b_path = tmp_path / "raid_b"
+    raid_a_path.mkdir()
+    raid_b_path.mkdir()
+    (raid_a_path / "show-a").mkdir()
+    (raid_b_path / "show-b").mkdir()
+
+    first_result = discover_and_sync_roots(
+        session=db_session,
+        raid_name="raid_a",
+        raid_path=raid_a_path,
+        discovered_at="2026-03-13T10:00:00+00:00",
+    )
+    second_result = discover_and_sync_roots(
+        session=db_session,
+        raid_name="raid_b",
+        raid_path=raid_b_path,
+        discovered_at="2026-03-13T10:05:00+00:00",
+    )
+
+    assert [record.path for record in first_result.created] == [
+        (raid_a_path / "show-a").resolve(strict=False).as_posix()
+    ]
+    assert [record.path for record in second_result.created] == [
+        (raid_b_path / "show-b").resolve(strict=False).as_posix()
+    ]
+    assert second_result.marked_missing == ()
+    assert [record.path for record in repo.list_active()] == [
+        (raid_a_path / "show-a").resolve(strict=False).as_posix(),
+        (raid_b_path / "show-b").resolve(strict=False).as_posix(),
+    ]
+
+
+def test_discover_and_sync_roots_marks_missing_only_within_current_raid_scope(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    repo = RootsRepository(db_session)
+    raid_a_path = tmp_path / "raid_a"
+    raid_b_path = tmp_path / "raid_b"
+    raid_a_path.mkdir()
+    raid_b_path.mkdir()
+    (raid_a_path / "show-a").mkdir()
+    (raid_b_path / "show-b").mkdir()
+
+    raid_a_missing_path = (raid_a_path / "missing-a").resolve(strict=False).as_posix()
+    raid_b_show_path = (raid_b_path / "show-b").resolve(strict=False).as_posix()
+
+    missing_a = repo.create(
+        raid_name="raid_a",
+        name="missing-a",
+        path=raid_a_missing_path,
+        device_id=1,
+        inode=2,
+        mtime_ns=3,
+        ctime_ns=4,
+        first_seen_at="2026-03-13T09:00:00+00:00",
+        last_seen_at="2026-03-13T09:00:00+00:00",
+    )
+    present_b = repo.create(
+        raid_name="raid_b",
+        name="show-b",
+        path=raid_b_show_path,
+        device_id=11,
+        inode=12,
+        mtime_ns=13,
+        ctime_ns=14,
+        first_seen_at="2026-03-13T09:00:00+00:00",
+        last_seen_at="2026-03-13T09:00:00+00:00",
+    )
+
+    result = discover_and_sync_roots(
+        session=db_session,
+        raid_name="raid_a",
+        raid_path=raid_a_path,
+        discovered_at="2026-03-13T10:00:00+00:00",
+    )
+
+    refreshed_missing_a = repo.get_by_id(missing_a.id)
+    refreshed_present_b = repo.get_by_id(present_b.id)
+
+    assert [record.path for record in result.marked_missing] == [raid_a_missing_path]
+    assert refreshed_missing_a is not None
+    assert refreshed_missing_a.is_missing is True
+    assert refreshed_present_b is not None
+    assert refreshed_present_b.is_missing is False
+    assert [record.path for record in repo.list_active()] == [
+        (raid_a_path / "show-a").resolve(strict=False).as_posix(),
+        raid_b_show_path,
+    ]
