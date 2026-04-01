@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -501,6 +502,171 @@ def test_scan_and_sync_project_dir_skips_disappeared_and_incomplete_stat_files(
     assert result.scanned_file_count == 0
     assert result.new_file_count == 0
     assert files_repo.list_by_project_dir(project_dir.id) == []
+
+
+def test_scan_and_sync_project_dir_skips_surrogate_file_rows(
+    db_session: Session,
+    tmp_path: Path,
+    monkeypatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from backup_projects.services import project_dir_scan_service as scan_service_module
+
+    roots_repo = RootsRepository(db_session)
+    dirs_repo = ProjectDirsRepository(db_session)
+    files_repo = ProjectFilesRepository(db_session)
+
+    root_path = tmp_path / "root"
+    root = _create_root(roots_repo, path=root_path.resolve().as_posix())
+    project_dir = dirs_repo.create(
+        root_id=root.id,
+        relative_path="Project A",
+        name="Project A",
+        dir_type="unknown",
+        first_seen_at="2026-03-14T09:00:00+00:00",
+        last_seen_at="2026-03-14T09:00:00+00:00",
+    )
+
+    project_dir_path = (root_path / "Project A").resolve()
+    good_path = project_dir_path / "good.prproj"
+    bad_path = project_dir_path / "bad\udcff.prproj"
+    target_stat = _stat_info(path=project_dir_path, is_dir=True, inode=100)
+    stat_map = {
+        project_dir_path.as_posix(): target_stat,
+        good_path.as_posix(): _stat_info(
+            path=good_path,
+            size_bytes=110,
+            mtime_ns=111,
+            ctime_ns=112,
+            inode=113,
+        ),
+        bad_path.as_posix(): _stat_info(
+            path=bad_path,
+            size_bytes=210,
+            mtime_ns=211,
+            ctime_ns=212,
+            inode=213,
+        ),
+    }
+
+    def fake_read_stat(path, *, follow_symlinks=False):
+        return stat_map.get(Path(path).as_posix())
+
+    def fake_find_files(
+        start_path,
+        *,
+        allowed_extensions,
+        excluded_path_patterns=(),
+        stay_on_filesystem=False,
+        follow_symlinks=False,
+        include_hidden=True,
+    ):
+        return (
+            FoundFileInfo(path=good_path, relative_path=Path("good.prproj")),
+            FoundFileInfo(path=bad_path, relative_path=Path("bad\udcff.prproj")),
+        )
+
+    monkeypatch.setattr(scan_service_module, "read_stat", fake_read_stat)
+    monkeypatch.setattr(scan_service_module, "find_files", fake_find_files)
+
+    with caplog.at_level(logging.WARNING):
+        result = scan_service_module.scan_and_sync_project_dir(
+            session=db_session,
+            project_dir_id=project_dir.id,
+            scanned_at="2026-03-14T10:00:00+00:00",
+        )
+
+    good_record = files_repo.get_by_dir_and_path(
+        project_dir_id=project_dir.id,
+        relative_path="Project A/good.prproj",
+    )
+    stored_files = files_repo.list_by_project_dir(project_dir.id)
+
+    assert result.project_dir_present is True
+    assert result.scanned_file_count == 2
+    assert result.new_file_count == 1
+    assert result.changed_file_count == 0
+    assert result.reactivated_file_count == 0
+    assert result.missing_file_count == 0
+    assert result.unchanged_file_count == 0
+    assert good_record is not None
+    assert [record.relative_path for record in stored_files] == ["Project A/good.prproj"]
+    assert "Skipping incremental project-dir file" in caplog.text
+    assert "project_file.relative_path" in caplog.text
+    assert "Project A/bad\\xff.prproj" in caplog.text
+
+
+def test_scan_and_sync_project_dir_skips_surrogate_project_dir_identity(
+    monkeypatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from backup_projects.services import project_dir_scan_service as scan_service_module
+
+    captured = {"create_called": False}
+
+    class FakeProjectDirsRepository:
+        def __init__(self, session) -> None:
+            return None
+
+        def get_by_id(self, project_dir_id):
+            return SimpleNamespace(
+                id=project_dir_id,
+                root_id=21,
+                relative_path="Project\udcff",
+                name="Project\udcff",
+                is_missing=False,
+            )
+
+    class FakeRootsRepository:
+        def __init__(self, session) -> None:
+            return None
+
+        def get_by_id(self, root_id):
+            return SimpleNamespace(id=root_id, path="/tmp/root", is_missing=False)
+
+    class FakeProjectFilesRepository:
+        def __init__(self, session) -> None:
+            return None
+
+        def list_by_project_dir(self, project_dir_id):
+            return []
+
+        def create(self, **kwargs):
+            captured["create_called"] = True
+            raise AssertionError("project_files_repo.create should not be called")
+
+    monkeypatch.setattr(
+        scan_service_module,
+        "ProjectDirsRepository",
+        FakeProjectDirsRepository,
+    )
+    monkeypatch.setattr(
+        scan_service_module,
+        "RootsRepository",
+        FakeRootsRepository,
+    )
+    monkeypatch.setattr(
+        scan_service_module,
+        "ProjectFilesRepository",
+        FakeProjectFilesRepository,
+    )
+
+    with caplog.at_level(logging.WARNING):
+        result = scan_service_module.scan_and_sync_project_dir(
+            session="fake-session",
+            project_dir_id=11,
+            scanned_at="2026-03-14T10:00:00+00:00",
+        )
+
+    assert captured["create_called"] is False
+    assert result.project_dir_id == 11
+    assert result.root_id == 21
+    assert result.project_dir_present is False
+    assert result.scanned_file_count == 0
+    assert result.new_file_count == 0
+    assert "Skipping incremental project-dir scan" in caplog.text
+    assert "project_dir.relative_path" in caplog.text
+    assert "Project\\xff" in caplog.text
 
 
 def _create_root(roots_repo: RootsRepository, *, path: str, is_missing: bool = False):

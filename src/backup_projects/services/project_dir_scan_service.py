@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
+import os
 
 from sqlalchemy.orm import Session
 
@@ -15,6 +17,8 @@ from backup_projects.services.file_stat_service import (
     ObservedFileState,
     compare_project_file_state,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,6 +72,33 @@ def scan_and_sync_project_dir(
     if root.is_missing:
         raise ValueError(f"Root {root.id} is marked missing")
 
+    invalid_dir_field = _find_invalid_text_field(
+        (
+            ("project_dir.relative_path", project_dir.relative_path),
+            ("project_dir.name", project_dir.name),
+        )
+    )
+    if invalid_dir_field is not None:
+        field_name, field_value = invalid_dir_field
+        logger.warning(
+            "Skipping incremental project-dir scan for project_dir_id=%s due to non-UTF-8-safe %s: %s",
+            project_dir.id,
+            field_name,
+            _render_filesystem_string(field_value),
+        )
+        return _build_skipped_project_dir_result(
+            project_dir_id=project_dir.id,
+            root_id=root.id,
+            project_dir_relative_path=project_dir.relative_path,
+            project_dir_path=_render_filesystem_string(
+                _resolve_project_dir_path(
+                    root_path=root.path,
+                    project_dir_relative_path=project_dir.relative_path,
+                )
+            ),
+            scanned_at=scanned_at,
+        )
+
     project_dir_path = _resolve_project_dir_path(
         root_path=root.path,
         project_dir_relative_path=project_dir.relative_path,
@@ -99,6 +130,23 @@ def scan_and_sync_project_dir(
     unchanged_file_count = 0
 
     for stored_relative_path, observed_file in observed_files_by_path.items():
+        invalid_file_field = _find_invalid_text_field(
+            (
+                ("project_file.relative_path", observed_file.stored_relative_path),
+                ("project_file.filename", observed_file.filename),
+                ("project_file.extension", observed_file.extension),
+            )
+        )
+        if invalid_file_field is not None:
+            field_name, field_value = invalid_file_field
+            logger.warning(
+                "Skipping incremental project-dir file for project_dir_id=%s due to non-UTF-8-safe %s: %s",
+                project_dir.id,
+                field_name,
+                _render_filesystem_string(field_value),
+            )
+            continue
+
         existing_file = existing_files_by_path.get(stored_relative_path)
         if existing_file is None:
             project_files_repo.create(
@@ -189,6 +237,30 @@ def scan_and_sync_project_dir(
     )
 
 
+def _build_skipped_project_dir_result(
+    *,
+    project_dir_id: int,
+    root_id: int,
+    project_dir_relative_path: str,
+    project_dir_path: str,
+    scanned_at: str,
+) -> ProjectDirIncrementalScanResult:
+    return ProjectDirIncrementalScanResult(
+        project_dir_id=project_dir_id,
+        root_id=root_id,
+        project_dir_relative_path=project_dir_relative_path,
+        project_dir_path=project_dir_path,
+        scanned_at=scanned_at,
+        project_dir_present=False,
+        scanned_file_count=0,
+        new_file_count=0,
+        changed_file_count=0,
+        reactivated_file_count=0,
+        missing_file_count=0,
+        unchanged_file_count=0,
+    )
+
+
 def _resolve_project_dir_path(*, root_path: str, project_dir_relative_path: str) -> str:
     if project_dir_relative_path == "":
         return resolve_path(root_path).as_posix()
@@ -243,3 +315,24 @@ def _build_stored_file_relative_path(
     if project_dir_relative_path == "":
         return file_relative_path
     return f"{project_dir_relative_path}/{file_relative_path}"
+
+
+def _find_invalid_text_field(
+    fields: tuple[tuple[str, str], ...],
+) -> tuple[str, str] | None:
+    for field_name, field_value in fields:
+        if not _is_utf8_safe(field_value):
+            return field_name, field_value
+    return None
+
+
+def _is_utf8_safe(value: str) -> bool:
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        return False
+    return True
+
+
+def _render_filesystem_string(value: str) -> str:
+    return os.fsencode(value).decode("ascii", "backslashreplace")
