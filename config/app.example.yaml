@@ -34,12 +34,26 @@ db:
 
 # Restic baseline config.
 # Keep secrets out of YAML; pass password via environment variable.
+# The local repository remains the primary backup target used by the app.
+# Optional archive/retention applies only to `run-daily`.
 restic:
   binary: "restic"
   repository: "/mnt/backup/restic-repo"
   password_env_var: "RESTIC_PASSWORD"
   timeout_seconds: 7200
+  archive:
+    enabled: false
+    remote_repository: null
+    remote_password_env_var: null
+    local_retention_keep_last: 1
 
 # Scheduler mode is cron-first for v1.
 scheduler:
   mode: "cron"
+
+# Optional post-report delivery. Only `local_file` is implemented.
+# The canonical report still lives under `runtime/reports/run-<id>/`.
+report_delivery:
+  enabled: false
+  mode: null
+  output_dir: null

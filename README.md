@@ -18,6 +18,8 @@ scripts/dev_run_web.sh
 
 Before running the CLI flow, update `config/app.yaml` and `config/rules.yaml` for your local paths and backup settings. Deployment and cron details live in [docs/deployment.md](docs/deployment.md).
 
+The accepted nightly surface is still `run-daily`. Depending on `app.yaml`, that one run may also archive the successful local snapshot to a remote restic repository, prune the local repository down to the configured keep-last value after successful archive, and copy the canonical text report to a configured local delivery directory.
+
 ## Development setup
 
 This project targets Python `3.12+` and expects a repo-local `.venv`.
@@ -60,6 +62,6 @@ scripts/dev_run_web.sh
 
 With the example web settings, the UI starts at `http://127.0.0.1:8080/`.
 
-This launcher currently reads `config/app.example.yaml` and `config/rules.example.yaml`, not `config/app.yaml`.
+This launcher reads `config/app.yaml` and `config/rules.yaml` by default.
 
 Further docs: [docs/deployment.md](docs/deployment.md)

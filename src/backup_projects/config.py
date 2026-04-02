@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from backup_projects.constants import (
     AAF_EXTENSION,
@@ -65,11 +65,39 @@ class DbSettings(StrictConfigModel):
     sqlite_path: str
 
 
+class ResticArchiveSettings(StrictConfigModel):
+    enabled: bool = False
+    remote_repository: str | None = None
+    remote_password_env_var: str | None = None
+    local_retention_keep_last: int = 1
+
+    @field_validator("local_retention_keep_last")
+    @classmethod
+    def validate_local_retention_keep_last(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("local_retention_keep_last must be > 0")
+        return value
+
+    @model_validator(mode="after")
+    def validate_enabled_archive_settings(self) -> "ResticArchiveSettings":
+        if not self.enabled:
+            return self
+
+        if self.remote_repository is None or self.remote_repository.strip() == "":
+            raise ValueError("archive.remote_repository must be set when archive.enabled is true")
+        if self.remote_password_env_var is None or self.remote_password_env_var.strip() == "":
+            raise ValueError(
+                "archive.remote_password_env_var must be set when archive.enabled is true"
+            )
+        return self
+
+
 class ResticSettings(StrictConfigModel):
     binary: str
     repository: str
     password_env_var: str
     timeout_seconds: int
+    archive: ResticArchiveSettings = Field(default_factory=ResticArchiveSettings)
 
     @field_validator("timeout_seconds")
     @classmethod
@@ -83,6 +111,27 @@ class SchedulerSettings(StrictConfigModel):
     mode: SchedulerMode
 
 
+class ReportDeliverySettings(StrictConfigModel):
+    enabled: bool = False
+    mode: Literal["local_file"] | None = None
+    output_dir: str | None = None
+
+    @model_validator(mode="after")
+    def validate_enabled_report_delivery(self) -> "ReportDeliverySettings":
+        if not self.enabled:
+            return self
+
+        if self.mode != "local_file":
+            raise ValueError(
+                "report_delivery.mode must be 'local_file' when report_delivery.enabled is true"
+            )
+        if self.output_dir is None or self.output_dir.strip() == "":
+            raise ValueError(
+                "report_delivery.output_dir must be set when report_delivery.enabled is true"
+            )
+        return self
+
+
 class AppFileConfig(StrictConfigModel):
     app: AppSettings
     raid_roots: list[RaidRoot]
@@ -91,6 +140,7 @@ class AppFileConfig(StrictConfigModel):
     db: DbSettings
     restic: ResticSettings
     scheduler: SchedulerSettings
+    report_delivery: ReportDeliverySettings = Field(default_factory=ReportDeliverySettings)
 
 
 class SizeLimits(StrictConfigModel):

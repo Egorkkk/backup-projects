@@ -40,7 +40,7 @@ The runs flow follows the same shape with an extra service seam. `src/backup_pro
 
 Write and orchestration flows use the same boundaries. Inventory and scan operations update SQLite through repositories rather than direct SQL in entry surfaces. Dry-run logic reads inventory and policy state, evaluates candidates, and builds manifest artifacts through `src/backup_projects/services/dry_run_service.py` and `src/backup_projects/services/manifest_builder.py`. Backup execution uses `src/backup_projects/services/backup_service.py`, which delegates the external restic call to `src/backup_projects/adapters/restic_adapter.py`.
 
-Run metadata, lock state, logs, and reports move through dedicated services rather than through templates or CLI code directly. The main seams are `src/backup_projects/services/run_service.py`, `src/backup_projects/services/run_lock.py`, `src/backup_projects/services/logging_setup.py`, and `src/backup_projects/services/report_service.py`.
+Run metadata, lock state, logs, and reports move through dedicated services rather than through templates or CLI code directly. The main seams are `src/backup_projects/services/run_service.py`, `src/backup_projects/services/run_lock.py`, `src/backup_projects/services/logging_setup.py`, and `src/backup_projects/services/report_service.py`. The current daily post-backup/archive flow also uses two small supporting service seams: `src/backup_projects/services/post_backup_archive_service.py` for archive-plus-local-retention, and `src/backup_projects/services/report_delivery_service.py` for optional local-file report delivery after canonical report write.
 
 ## Jobs Flow
 
@@ -50,7 +50,9 @@ The accepted jobs share a common orchestration pattern. A job starts a run recor
 
 `src/backup_projects/jobs/backup_job.py` is the backup-oriented orchestration layer. It resolves active roots, builds dry-run manifests, writes manifest artifacts, invokes the backup service/restic flow, and then records summary and report output for the run.
 
-`src/backup_projects/jobs/daily_job.py` is the combined daily pipeline. It performs root discovery, structural rescan when needed, incremental scan, manual-include processing, manifest generation, backup execution, and final reporting as one end-to-end daily run.
+`src/backup_projects/jobs/daily_job.py` is the combined daily pipeline. It performs root discovery, structural rescan when needed, incremental scan, manual-include processing, manifest generation, backup execution, optional post-backup archive/retention sequencing, canonical report writing, optional report delivery, and final reporting as one end-to-end daily run.
+
+The concrete restic command details remain below the jobs layer. `daily_job.py` owns the sequencing decision, while `src/backup_projects/adapters/restic_adapter.py` and `src/backup_projects/adapters/process/restic_runner.py` own the actual restic subprocess construction for local backup, snapshot copy, and retention commands.
 
 The current public trigger surfaces for these orchestration flows are intentionally limited. The main CLI job trigger is `src/backup_projects/cli/run_daily.py`. The web UI can also trigger selected operator actions through `src/backup_projects/web/routes_actions.py`, which delegates to `src/backup_projects/services/actions_service.py` for manual daily runs, backup runs, root dry-runs, and root rescans.
 

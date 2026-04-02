@@ -9,11 +9,17 @@ from backup_projects.adapters.restic_adapter import (
     ResticBackupRequest,
     ResticBackupResult,
     ResticCommandFailureError,
+    ResticCopySnapshotRequest,
+    ResticCopySnapshotResult,
+    ResticForgetKeepLastRequest,
+    ResticForgetKeepLastResult,
     ResticOutputParseError,
     ResticSnapshotIdMissingError,
     ResticTimeoutError,
     parse_restic_output,
     run_restic_backup,
+    run_restic_copy_snapshot,
+    run_restic_forget_keep_last_global,
 )
 
 
@@ -254,3 +260,84 @@ def test_run_restic_backup_maps_generic_command_timeout_error() -> None:
     assert exc_info.value.timeout_seconds == 120
     assert exc_info.value.stdout == "partial stdout"
     assert exc_info.value.stderr == "partial stderr"
+
+
+def test_run_restic_copy_snapshot_returns_adapter_result_without_leaking_command_result() -> None:
+    request = ResticCopySnapshotRequest(
+        snapshot_id="abc12345",
+        binary="restic",
+        source_repository="/mnt/backup/local-repo",
+        source_password_env_var="LOCAL_RESTIC_PASSWORD",
+        destination_repository="/mnt/backup/remote-repo",
+        destination_password_env_var="REMOTE_RESTIC_PASSWORD",
+        timeout_seconds=600,
+    )
+
+    def fake_runner(_: ResticCopySnapshotRequest) -> CommandResult:
+        return CommandResult(
+            argv=("restic", "copy", "abc12345"),
+            returncode=0,
+            stdout="copied snapshot abc12345",
+            stderr="copy warning",
+            duration_seconds=4.5,
+        )
+
+    result = run_restic_copy_snapshot(request, runner=fake_runner)
+
+    assert isinstance(result, ResticCopySnapshotResult)
+    assert not isinstance(result, CommandResult)
+    assert result == ResticCopySnapshotResult(
+        snapshot_id="abc12345",
+        argv=("restic", "copy", "abc12345"),
+        stdout="copied snapshot abc12345",
+        stderr="copy warning",
+        duration_seconds=4.5,
+    )
+
+
+def test_run_restic_forget_keep_last_global_returns_adapter_result_without_leaking_command_result(
+) -> None:
+    request = ResticForgetKeepLastRequest(
+        keep_last=1,
+        binary="restic",
+        repository="/mnt/backup/local-repo",
+        password_env_var="LOCAL_RESTIC_PASSWORD",
+        timeout_seconds=900,
+    )
+
+    def fake_runner(_: ResticForgetKeepLastRequest) -> CommandResult:
+        return CommandResult(
+            argv=(
+                "restic",
+                "forget",
+                "--keep-last",
+                "1",
+                "--group-by",
+                "",
+                "--prune",
+            ),
+            returncode=0,
+            stdout="removed 3 snapshots",
+            stderr="prune warning",
+            duration_seconds=6.0,
+        )
+
+    result = run_restic_forget_keep_last_global(request, runner=fake_runner)
+
+    assert isinstance(result, ResticForgetKeepLastResult)
+    assert not isinstance(result, CommandResult)
+    assert result == ResticForgetKeepLastResult(
+        keep_last=1,
+        argv=(
+            "restic",
+            "forget",
+            "--keep-last",
+            "1",
+            "--group-by",
+            "",
+            "--prune",
+        ),
+        stdout="removed 3 snapshots",
+        stderr="prune warning",
+        duration_seconds=6.0,
+    )

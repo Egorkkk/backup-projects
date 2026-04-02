@@ -15,7 +15,7 @@ Registered top-level commands:
 - `scan-structure`: run structural scan for one known root
 - `scan-project-dirs`: run incremental scan for known project dirs
 - `scan-manual`: apply manual includes for one known root
-- `run-daily`: run the daily backup pipeline for all active roots
+- `run-daily`: run the daily backup pipeline for all active roots, including optional post-backup archive/retention and optional local-file report delivery according to `app.yaml`
 - `backup`: build manifest artifacts and run backup for one root
 - `dry-run`: simulate current policy selection without running backup
 - `rules`: list and mutate policy rules in SQLite
@@ -68,6 +68,8 @@ scripts/dev_run_cli.sh runs --config config/app.yaml export --id 1 > run-1.html
 ```
 
 Backup-capable commands require the restic password environment variable named in `app.yaml`.
+
+`run-daily` remains the canonical cron-ready nightly surface. If `restic.archive.*` is enabled, it may archive the successful local snapshot to a remote repository and then apply local retention. If `report_delivery.*` is enabled, it may also copy the canonical `report.txt` artifact to a configured local output directory. These extra steps are not currently part of `run-backup` or `backup`.
 
 `run-weekly` and `doctor` are intentionally omitted from normal workflow examples because they are placeholders.
 

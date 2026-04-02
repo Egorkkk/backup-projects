@@ -8,8 +8,12 @@ from backup_projects.adapters.process.command_runner import (
 from backup_projects.adapters.process.restic_runner import (
     ResticBackupRequest,
     ResticCommandFailureError,
+    ResticCopySnapshotRequest,
+    ResticForgetKeepLastRequest,
     ResticTimeoutError,
     run_restic_backup_command,
+    run_restic_copy_snapshot_command,
+    run_restic_forget_keep_last_global_command,
 )
 
 
@@ -183,3 +187,115 @@ def test_run_restic_backup_command_maps_timeout_to_restic_error(
     assert exc_info.value.timeout_seconds == 90
     assert exc_info.value.stdout == "partial stdout"
     assert exc_info.value.stderr == "partial stderr"
+
+
+def test_run_restic_copy_snapshot_command_builds_expected_argv_and_env(monkeypatch) -> None:
+    monkeypatch.setenv("LOCAL_RESTIC_PASSWORD", "local-secret")
+    monkeypatch.setenv("REMOTE_RESTIC_PASSWORD", "remote-secret")
+    captured: dict[str, object] = {}
+    request = ResticCopySnapshotRequest(
+        snapshot_id="abc12345",
+        binary="restic",
+        source_repository="/mnt/backup/local-repo",
+        source_password_env_var="LOCAL_RESTIC_PASSWORD",
+        destination_repository="/mnt/backup/remote-repo",
+        destination_password_env_var="REMOTE_RESTIC_PASSWORD",
+        timeout_seconds=600,
+    )
+
+    def fake_command_runner(
+        argv,
+        *,
+        cwd=None,
+        env_overrides=None,
+        timeout_seconds=None,
+        check=False,
+    ) -> CommandResult:
+        captured["argv"] = argv
+        captured["cwd"] = cwd
+        captured["env_overrides"] = env_overrides
+        captured["timeout_seconds"] = timeout_seconds
+        captured["check"] = check
+        return CommandResult(
+            argv=tuple(argv),
+            returncode=0,
+            stdout="copied snapshot",
+            stderr="",
+            duration_seconds=1.0,
+        )
+
+    result = run_restic_copy_snapshot_command(request, command_runner=fake_command_runner)
+
+    assert result.stdout == "copied snapshot"
+    assert captured["argv"] == (
+        "restic",
+        "copy",
+        "abc12345",
+    )
+    assert captured["cwd"] is None
+    assert captured["env_overrides"] == {
+        "RESTIC_REPOSITORY": "/mnt/backup/remote-repo",
+        "RESTIC_PASSWORD": "remote-secret",
+        "RESTIC_FROM_REPOSITORY": "/mnt/backup/local-repo",
+        "RESTIC_FROM_PASSWORD": "local-secret",
+    }
+    assert captured["timeout_seconds"] == 600
+    assert captured["check"] is True
+
+
+def test_run_restic_forget_keep_last_global_command_builds_expected_argv_and_env(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("LOCAL_RESTIC_PASSWORD", "local-secret")
+    captured: dict[str, object] = {}
+    request = ResticForgetKeepLastRequest(
+        keep_last=1,
+        binary="restic",
+        repository="/mnt/backup/local-repo",
+        password_env_var="LOCAL_RESTIC_PASSWORD",
+        timeout_seconds=900,
+    )
+
+    def fake_command_runner(
+        argv,
+        *,
+        cwd=None,
+        env_overrides=None,
+        timeout_seconds=None,
+        check=False,
+    ) -> CommandResult:
+        captured["argv"] = argv
+        captured["cwd"] = cwd
+        captured["env_overrides"] = env_overrides
+        captured["timeout_seconds"] = timeout_seconds
+        captured["check"] = check
+        return CommandResult(
+            argv=tuple(argv),
+            returncode=0,
+            stdout="removed old snapshots",
+            stderr="",
+            duration_seconds=2.0,
+        )
+
+    result = run_restic_forget_keep_last_global_command(
+        request,
+        command_runner=fake_command_runner,
+    )
+
+    assert result.stdout == "removed old snapshots"
+    assert captured["argv"] == (
+        "restic",
+        "forget",
+        "--keep-last",
+        "1",
+        "--group-by",
+        "",
+        "--prune",
+    )
+    assert captured["cwd"] is None
+    assert captured["env_overrides"] == {
+        "RESTIC_REPOSITORY": "/mnt/backup/local-repo",
+        "RESTIC_PASSWORD": "local-secret",
+    }
+    assert captured["timeout_seconds"] == 900
+    assert captured["check"] is True

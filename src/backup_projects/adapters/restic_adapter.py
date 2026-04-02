@@ -12,8 +12,12 @@ from backup_projects.adapters.process.restic_runner import (
     ResticBackupError,
     ResticBackupRequest,
     ResticCommandFailureError,
+    ResticCopySnapshotRequest,
+    ResticForgetKeepLastRequest,
     ResticTimeoutError,
     run_restic_backup_command,
+    run_restic_copy_snapshot_command,
+    run_restic_forget_keep_last_global_command,
 )
 
 
@@ -28,6 +32,24 @@ class ResticBackupResult:
     manifest_file_path: str
     snapshot_id: str
     summary_payload: dict[str, object]
+    argv: tuple[str, ...]
+    stdout: str
+    stderr: str
+    duration_seconds: float
+
+
+@dataclass(frozen=True, slots=True)
+class ResticCopySnapshotResult:
+    snapshot_id: str
+    argv: tuple[str, ...]
+    stdout: str
+    stderr: str
+    duration_seconds: float
+
+
+@dataclass(frozen=True, slots=True)
+class ResticForgetKeepLastResult:
+    keep_last: int
     argv: tuple[str, ...]
     stdout: str
     stderr: str
@@ -127,15 +149,65 @@ def run_restic_backup(
     )
 
 
+def run_restic_copy_snapshot(
+    request: ResticCopySnapshotRequest,
+    *,
+    runner=run_restic_copy_snapshot_command,
+) -> ResticCopySnapshotResult:
+    command_result = _run_restic_command_request(request, runner=runner)
+    return ResticCopySnapshotResult(
+        snapshot_id=request.snapshot_id,
+        argv=command_result.argv,
+        stdout=command_result.stdout,
+        stderr=command_result.stderr,
+        duration_seconds=command_result.duration_seconds,
+    )
+
+
+def run_restic_forget_keep_last_global(
+    request: ResticForgetKeepLastRequest,
+    *,
+    runner=run_restic_forget_keep_last_global_command,
+) -> ResticForgetKeepLastResult:
+    command_result = _run_restic_command_request(request, runner=runner)
+    return ResticForgetKeepLastResult(
+        keep_last=request.keep_last,
+        argv=command_result.argv,
+        stdout=command_result.stdout,
+        stderr=command_result.stderr,
+        duration_seconds=command_result.duration_seconds,
+    )
+
+
+def _run_restic_command_request(request, *, runner) -> CommandResult:
+    try:
+        return runner(request)
+    except CommandExitError as exc:
+        raise ResticCommandFailureError(exc.result) from exc
+    except CommandTimeoutError as exc:
+        raise ResticTimeoutError(
+            argv=exc.argv,
+            timeout_seconds=exc.timeout_seconds,
+            stdout=exc.stdout,
+            stderr=exc.stderr,
+        ) from exc
+
+
 __all__ = [
     "ResticBackupError",
     "ResticBackupRequest",
     "ResticBackupResult",
     "ResticCommandFailureError",
+    "ResticCopySnapshotRequest",
+    "ResticCopySnapshotResult",
+    "ResticForgetKeepLastRequest",
+    "ResticForgetKeepLastResult",
     "ResticOutputParseError",
     "ResticParsedResult",
     "ResticSnapshotIdMissingError",
     "ResticTimeoutError",
     "parse_restic_output",
     "run_restic_backup",
+    "run_restic_copy_snapshot",
+    "run_restic_forget_keep_last_global",
 ]
